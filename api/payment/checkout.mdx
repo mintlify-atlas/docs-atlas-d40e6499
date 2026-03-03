@@ -1,0 +1,141 @@
+---
+title: "Create Checkout Session"
+api: "POST /api/create-checkout-session"
+description: "Create a Stripe checkout session for subscription or one-time payments"
+---
+
+Creates a Stripe Checkout session for purchasing access to the LSAT Training Platform. Supports both recurring weekly subscriptions and one-time lifetime access payments.
+
+## Request Body
+
+<ParamField body="userId" type="string" required>
+  The unique identifier of the user purchasing a subscription. This is used as the `client_reference_id` in the Stripe session.
+</ParamField>
+
+<ParamField body="planId" type="string" required>
+  The subscription plan type. Must be either `"weekly"` for recurring subscriptions or `"one-time"` for lifetime access.
+  
+  - `weekly` - Creates a subscription mode checkout with recurring billing
+  - `one-time` - Creates a one-time payment mode checkout
+</ParamField>
+
+## Response
+
+<ResponseField name="sessionId" type="string">
+  The Stripe Checkout Session ID. Use this to redirect users to the Stripe checkout page via `stripe.redirectToCheckout({ sessionId })`.
+</ResponseField>
+
+## Subscription Flow
+
+The checkout session is configured with:
+
+- **Payment Methods**: Card payments only
+- **Mode**: `subscription` for weekly plans, `payment` for one-time purchases
+- **Success URL**: Redirects to `/subscription/success?session_id={CHECKOUT_SESSION_ID}`
+- **Cancel URL**: Redirects to `/subscription?canceled=true`
+- **Metadata**: Stores `userId` and `planId` for webhook processing
+
+### Price IDs
+
+The API automatically selects the correct Stripe Price ID based on the plan:
+- Weekly subscriptions use `STRIPE_WEEKLY_PRICE_ID` environment variable
+- One-time purchases use `STRIPE_ONE_TIME_PRICE_ID` environment variable
+
+## Error Responses
+
+<ResponseField name="error" type="string">
+  Error message describing what went wrong.
+</ResponseField>
+
+### 400 Bad Request
+Returned when required parameters are missing.
+
+```json
+{
+  "error": "Missing userId or planId"
+}
+```
+
+### 500 Internal Server Error
+Returned when Stripe API fails or server error occurs.
+
+```json
+{
+  "error": "An error occurred"
+}
+```
+
+<RequestExample>
+
+```bash cURL
+curl -X POST https://your-domain.com/api/create-checkout-session \
+  -H "Content-Type: application/json" \
+  -d '{
+    "userId": "user_123abc",
+    "planId": "weekly"
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('/api/create-checkout-session', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    userId: 'user_123abc',
+    planId: 'weekly'
+  })
+});
+
+const { sessionId } = await response.json();
+
+// Redirect to Stripe Checkout
+const stripe = await loadStripe(publishableKey);
+await stripe.redirectToCheckout({ sessionId });
+```
+
+```python Python
+import requests
+
+response = requests.post(
+    'https://your-domain.com/api/create-checkout-session',
+    json={
+        'userId': 'user_123abc',
+        'planId': 'weekly'
+    }
+)
+
+data = response.json()
+session_id = data['sessionId']
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json Success Response
+{
+  "sessionId": "cs_test_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0"
+}
+```
+
+```json Error Response
+{
+  "error": "Missing userId or planId"
+}
+```
+
+</ResponseExample>
+
+## Integration Notes
+
+- Requires `STRIPE_SECRET_KEY` environment variable
+- Uses Stripe API version `2023-10-16`
+- Session metadata includes both `userId` and `planId` for webhook processing
+- The `client_reference_id` is set to the `userId` for easy user identification in webhooks
+- Completed purchases trigger the `checkout.session.completed` webhook event
+
+## Related Endpoints
+
+- [Stripe Webhook Handler](/api/payment/webhook) - Processes payment events

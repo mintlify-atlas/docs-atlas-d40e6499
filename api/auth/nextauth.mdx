@@ -1,0 +1,687 @@
+---
+title: 'NextAuth API'
+description: 'NextAuth.js authentication endpoints and configuration'
+---
+
+## Endpoint
+
+```
+GET/POST /api/auth/*
+```
+
+NextAuth.js provides a catch-all route handler at `/api/auth/[...nextauth]` that manages all authentication-related requests.
+
+## Authentication Providers
+
+### Google OAuth Provider
+
+Enables Google account authentication using OAuth 2.0.
+
+#### Configuration
+
+<ParamField path="GOOGLE_CLIENT_ID" type="string" required>
+  Google OAuth 2.0 client ID from Google Cloud Console
+</ParamField>
+
+<ParamField path="GOOGLE_CLIENT_SECRET" type="string" required>
+  Google OAuth 2.0 client secret from Google Cloud Console
+</ParamField>
+
+#### Usage
+
+<CodeGroup>
+```javascript Sign In
+import { signIn } from 'next-auth/react';
+
+// Redirect to Google OAuth
+await signIn('google');
+
+// With custom callback URL
+await signIn('google', { 
+  callbackUrl: '/dashboard' 
+});
+```
+
+```javascript Callback Flow
+// User is redirected to Google
+// After authentication, Google redirects back to:
+GET /api/auth/callback/google?code=...
+
+// NextAuth processes the callback and creates session
+```
+</CodeGroup>
+
+### Credentials Provider
+
+Email and password authentication backed by Firebase Authentication.
+
+#### Request Parameters
+
+<ParamField path="email" type="string" required>
+  User's email address
+  
+  <sub>Example: `user@example.com`</sub>
+</ParamField>
+
+<ParamField path="password" type="string" required>
+  User's password (minimum requirements defined by Firebase)
+  
+  <sub>Example: `SecureP@ssw0rd`</sub>
+</ParamField>
+
+#### Sign In Request
+
+<CodeGroup>
+```javascript Client-Side
+import { signIn } from 'next-auth/react';
+
+const result = await signIn('credentials', {
+  email: 'user@example.com',
+  password: 'SecureP@ssw0rd',
+  redirect: false
+});
+
+if (result?.error) {
+  // Handle error
+  console.error(result.error);
+} else {
+  // Authentication successful
+  console.log('Signed in successfully');
+}
+```
+
+```javascript Direct API Call
+const response = await fetch('/api/auth/callback/credentials', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    email: 'user@example.com',
+    password: 'SecureP@ssw0rd',
+  }),
+});
+
+const data = await response.json();
+```
+</CodeGroup>
+
+#### Authentication Flow
+
+```javascript
+// Internal flow (from [...nextauth].ts:20-46)
+async authorize(credentials) {
+  // 1. Validate input
+  if (!credentials?.email || !credentials?.password) {
+    throw new Error("Email and password are required");
+  }
+
+  // 2. Authenticate with Firebase
+  const userCredential = await signInWithEmailAndPassword(
+    auth, 
+    credentials.email, 
+    credentials.password
+  );
+  const user = userCredential.user;
+
+  // 3. Save/update user in Firestore
+  const userRef = doc(db, "users", user.uid);
+  await setDoc(userRef, {
+    id: user.uid,
+    email: user.email,
+    name: user.displayName || "User",
+  });
+
+  // 4. Return user object for session
+  return {
+    id: user.uid,
+    email: user.email,
+    name: user.displayName || "User",
+  };
+}
+```
+
+#### Response
+
+<ResponseField name="ok" type="boolean">
+  Whether authentication was successful
+</ResponseField>
+
+<ResponseField name="error" type="string">
+  Error message if authentication failed
+  
+  Possible values:
+  - `"Email and password are required"`
+  - `"Invalid email or password"`
+</ResponseField>
+
+<ResponseField name="status" type="number">
+  HTTP status code
+</ResponseField>
+
+<ResponseField name="url" type="string">
+  Redirect URL after authentication
+</ResponseField>
+
+## NextAuth Endpoints
+
+NextAuth.js automatically creates the following endpoints:
+
+### Sign In
+
+```
+GET /api/auth/signin
+```
+
+Displays the sign-in page (if using built-in UI) or redirects to provider.
+
+### Sign Out
+
+```
+GET /api/auth/signout
+POST /api/auth/signout
+```
+
+Signs out the current user and clears the session.
+
+<CodeGroup>
+```javascript Client-Side
+import { signOut } from 'next-auth/react';
+
+// Sign out and redirect to home
+await signOut({ callbackUrl: '/' });
+
+// Sign out without redirect
+await signOut({ redirect: false });
+```
+
+```javascript Direct API Call
+await fetch('/api/auth/signout', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    callbackUrl: '/'
+  })
+});
+```
+</CodeGroup>
+
+### Session
+
+```
+GET /api/auth/session
+```
+
+Returns the current session data.
+
+#### Response
+
+<ResponseField name="user" type="object">
+  User information from Firestore
+  
+  <Expandable title="properties">
+    <ResponseField name="id" type="string">
+      Firebase user UID
+    </ResponseField>
+    
+    <ResponseField name="email" type="string">
+      User's email address
+    </ResponseField>
+    
+    <ResponseField name="name" type="string">
+      User's display name
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="expires" type="string">
+  ISO 8601 timestamp when the session expires
+</ResponseField>
+
+#### Example Response
+
+```json
+{
+  "user": {
+    "id": "abc123xyz789",
+    "email": "user@example.com",
+    "name": "John Doe"
+  },
+  "expires": "2026-04-03T12:00:00.000Z"
+}
+```
+
+#### Usage
+
+<CodeGroup>
+```javascript Client-Side Hook
+import { useSession } from 'next-auth/react';
+
+export default function Component() {
+  const { data: session, status } = useSession();
+  
+  if (status === 'loading') return <div>Loading...</div>;
+  if (status === 'unauthenticated') return <div>Not signed in</div>;
+  
+  return <div>Signed in as {session.user.email}</div>;
+}
+```
+
+```javascript Direct Fetch
+const response = await fetch('/api/auth/session');
+const session = await response.json();
+
+if (session?.user) {
+  console.log('User:', session.user);
+} else {
+  console.log('Not authenticated');
+}
+```
+
+```javascript Server-Side
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]';
+
+// In API route or Server Component
+const session = await getServerSession(authOptions);
+
+if (!session) {
+  return new Response('Unauthorized', { status: 401 });
+}
+```
+</CodeGroup>
+
+### CSRF Token
+
+```
+GET /api/auth/csrf
+```
+
+Returns a CSRF token for form submissions.
+
+#### Response
+
+```json
+{
+  "csrfToken": "abc123..."
+}
+```
+
+### Providers
+
+```
+GET /api/auth/providers
+```
+
+Returns available authentication providers.
+
+#### Response
+
+```json
+{
+  "google": {
+    "id": "google",
+    "name": "Google",
+    "type": "oauth",
+    "signinUrl": "/api/auth/signin/google",
+    "callbackUrl": "/api/auth/callback/google"
+  },
+  "credentials": {
+    "id": "credentials",
+    "name": "Credentials",
+    "type": "credentials",
+    "signinUrl": "/api/auth/signin/credentials",
+    "callbackUrl": "/api/auth/callback/credentials"
+  }
+}
+```
+
+## Callbacks
+
+### JWT Callback
+
+Called whenever a JWT is created or updated.
+
+```javascript
+// From [...nextauth].ts:64-69
+async jwt({ token, user }) {
+  if (user) {
+    token.sub = user.id; // Store user ID in token
+  }
+  return token;
+}
+```
+
+<ParamField path="token" type="object">
+  The JWT token object
+</ParamField>
+
+<ParamField path="user" type="object">
+  User object (only available on sign-in)
+</ParamField>
+
+### Session Callback
+
+Called whenever a session is accessed (client or server).
+
+```javascript
+// From [...nextauth].ts:50-63
+async session({ session, token }) {
+  if (token.sub) {
+    // Fetch fresh user data from Firestore
+    const userRef = doc(db, "users", token.sub);
+    const userDoc = await getDoc(userRef);
+    
+    if (userDoc.exists()) {
+      session.user = userDoc.data();
+    }
+  }
+  return session;
+}
+```
+
+<ParamField path="session" type="object">
+  The session object being created
+</ParamField>
+
+<ParamField path="token" type="object">
+  The JWT token containing user ID
+</ParamField>
+
+<Note>
+  The session callback fetches user data from Firestore on every session check, ensuring the session always contains the latest user information.
+</Note>
+
+## Configuration
+
+### Session Strategy
+
+```javascript
+session: { strategy: "jwt" }
+```
+
+The platform uses JWT-based sessions instead of database sessions for better scalability.
+
+<ParamField path="strategy" type="string" default="jwt">
+  Session storage strategy. Can be `"jwt"` or `"database"`.
+  
+  The platform uses JWT for stateless authentication.
+</ParamField>
+
+### Secret
+
+```javascript
+secret: process.env.NEXTAUTH_SECRET
+```
+
+<ParamField path="NEXTAUTH_SECRET" type="string" required>
+  Secret key used to encrypt JWT tokens and sign cookies.
+  
+  Generate with: `openssl rand -base64 32`
+</ParamField>
+
+<Warning>
+  The `NEXTAUTH_SECRET` must be set in production. Without it, NextAuth will throw an error.
+</Warning>
+
+## Firestore Integration
+
+### User Document Creation
+
+When a user signs in (via credentials or OAuth), their data is stored in Firestore:
+
+```javascript
+// Collection: users
+// Document ID: Firebase UID
+const userRef = doc(db, "users", user.uid);
+await setDoc(userRef, {
+  id: user.uid,
+  email: user.email,
+  name: user.displayName || "User",
+});
+```
+
+### Session Data Retrieval
+
+On each session access, user data is fetched from Firestore:
+
+```javascript
+const userRef = doc(db, "users", token.sub);
+const userDoc = await getDoc(userRef);
+
+if (userDoc.exists()) {
+  session.user = userDoc.data();
+}
+```
+
+<Info>
+  This ensures the session always contains the most up-to-date user information from Firestore, even if the profile was updated elsewhere.
+</Info>
+
+## Error Responses
+
+### Invalid Credentials
+
+```json
+{
+  "error": "Invalid email or password"
+}
+```
+
+Returned when:
+- Email doesn't exist in Firebase
+- Password is incorrect
+- Firebase authentication fails
+
+### Missing Fields
+
+```json
+{
+  "error": "Email and password are required"
+}
+```
+
+Returned when the sign-in request is missing email or password.
+
+### Configuration Error
+
+```json
+{
+  "error": "Configuration"
+}
+```
+
+Returned when:
+- Required environment variables are missing
+- Firebase credentials are invalid
+- NextAuth secret is not set (production only)
+
+### Session Error
+
+```json
+{
+  "error": "Unable to fetch user data from Firestore"
+}
+```
+
+Returned when:
+- Firestore is unavailable
+- User document doesn't exist
+- `token.sub` is undefined
+
+## Environment Variables
+
+Complete list of required environment variables:
+
+<ParamField path="NEXTAUTH_SECRET" type="string" required>
+  Secret for JWT encryption (generate with `openssl rand -base64 32`)
+</ParamField>
+
+<ParamField path="GOOGLE_CLIENT_ID" type="string" required>
+  Google OAuth client ID from Google Cloud Console
+</ParamField>
+
+<ParamField path="GOOGLE_CLIENT_SECRET" type="string" required>
+  Google OAuth client secret from Google Cloud Console
+</ParamField>
+
+<ParamField path="NEXT_PUBLIC_FIREBASE_API_KEY" type="string" required>
+  Firebase API key for client-side authentication
+</ParamField>
+
+<ParamField path="NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN" type="string" required>
+  Firebase auth domain (e.g., `project-id.firebaseapp.com`)
+</ParamField>
+
+<ParamField path="NEXT_PUBLIC_FIREBASE_PROJECT_ID" type="string" required>
+  Firebase project ID
+</ParamField>
+
+<ParamField path="NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET" type="string" required>
+  Firebase storage bucket
+</ParamField>
+
+<ParamField path="NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID" type="string" required>
+  Firebase messaging sender ID
+</ParamField>
+
+<ParamField path="NEXT_PUBLIC_FIREBASE_APP_ID" type="string" required>
+  Firebase app ID
+</ParamField>
+
+<ParamField path="FIREBASE_CLIENT_EMAIL" type="string" required>
+  Firebase Admin service account email
+</ParamField>
+
+<ParamField path="FIREBASE_PRIVATE_KEY" type="string" required>
+  Firebase Admin service account private key
+</ParamField>
+
+## Example Implementation
+
+### Complete Sign-In Flow
+
+```javascript
+import { useState } from 'react';
+import { signIn } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+
+export default function SignInPage() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
+
+  const handleCredentialsSignIn = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    try {
+      const result = await signIn('credentials', {
+        email,
+        password,
+        redirect: false,
+      });
+
+      if (result?.error) {
+        setError(result.error);
+      } else if (result?.ok) {
+        router.push('/dashboard');
+      }
+    } catch (err) {
+      setError('An unexpected error occurred');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setLoading(true);
+    await signIn('google', { callbackUrl: '/dashboard' });
+  };
+
+  return (
+    <div>
+      <h1>Sign In</h1>
+      
+      {error && <div className="error">{error}</div>}
+      
+      <form onSubmit={handleCredentialsSignIn}>
+        <input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="Email"
+          required
+        />
+        <input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="Password"
+          required
+        />
+        <button type="submit" disabled={loading}>
+          {loading ? 'Signing in...' : 'Sign In'}
+        </button>
+      </form>
+      
+      <button onClick={handleGoogleSignIn} disabled={loading}>
+        Sign in with Google
+      </button>
+    </div>
+  );
+}
+```
+
+### Protected API Route
+
+```javascript
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]';
+import { NextRequest, NextResponse } from 'next/server';
+
+export async function GET(req: NextRequest) {
+  // Validate session
+  const session = await getServerSession(authOptions);
+  
+  if (!session) {
+    return NextResponse.json(
+      { error: 'Unauthorized' },
+      { status: 401 }
+    );
+  }
+  
+  // Access user data
+  const userId = session.user.id;
+  const userEmail = session.user.email;
+  
+  // Proceed with authenticated request
+  return NextResponse.json({
+    message: 'Protected data',
+    userId,
+    userEmail,
+  });
+}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Authentication Overview" icon="shield" href="/api/auth/overview">
+    Learn about the authentication flow and strategy
+  </Card>
+  <Card title="User Profile" icon="user" href="/api/user/profile">
+    Fetch user profile data
+  </Card>
+  <Card title="User Onboarding" icon="clipboard" href="/api/user/onboarding">
+    Complete user onboarding
+  </Card>
+  <Card title="Authentication Guide" icon="book" href="/authentication">
+    Complete authentication documentation
+  </Card>
+</CardGroup>

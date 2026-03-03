@@ -1,0 +1,346 @@
+---
+title: 'Exam Results'
+api: 'POST /api/exam-results'
+description: 'Save exam results, calculate bar scores and percentiles, and track performance insights'
+---
+
+## Overview
+
+This endpoint processes and saves bar exam results. It calculates bar scores, percentiles, and time management metrics, retrieves strengths and areas for improvement from a hardcoded mapping, manages performance insights history, and updates study streaks.
+
+## Authentication
+
+Requires a valid user UUID passed as a query parameter.
+
+## Request
+
+<ParamField query="uuid" type="string" required>
+  Unique identifier for the user
+</ParamField>
+
+### Body Parameters
+
+<ParamField body="examId" type="string" required>
+  Unique identifier for the exam (used to retrieve hardcoded strengths/improvements)
+</ParamField>
+
+<ParamField body="totalQuestions" type="number" required>
+  Total number of questions in the exam
+</ParamField>
+
+<ParamField body="correctAnswers" type="number" required>
+  Number of questions answered correctly (can be 0)
+</ParamField>
+
+<ParamField body="totalTimeMinutes" type="number" required>
+  Total time spent on the exam in minutes (can be 0)
+</ParamField>
+
+## Response
+
+<ResponseField name="message" type="string">
+  Success message
+</ResponseField>
+
+<ResponseField name="examResult" type="object">
+  Complete exam result object containing:
+</ResponseField>
+
+<ResponseField name="examResult.examId" type="string">
+  The exam identifier
+</ResponseField>
+
+<ResponseField name="examResult.barScore" type="number">
+  Calculated bar score (4 marks per correct answer)
+</ResponseField>
+
+<ResponseField name="examResult.percentile" type="number">
+  Calculated percentile ranking (0-100)
+</ResponseField>
+
+<ResponseField name="examResult.totalQuestions" type="number">
+  Total questions in the exam
+</ResponseField>
+
+<ResponseField name="examResult.correctAnswers" type="number">
+  Number of correct answers
+</ResponseField>
+
+<ResponseField name="examResult.incorrectAnswers" type="number">
+  Number of incorrect answers
+</ResponseField>
+
+<ResponseField name="examResult.skippedAnswers" type="number">
+  Number of skipped questions (currently always 0)
+</ResponseField>
+
+<ResponseField name="examResult.totalTimeMinutes" type="number">
+  Total time spent in minutes
+</ResponseField>
+
+<ResponseField name="examResult.averageTimePerQuestion" type="number">
+  Average time per question in seconds
+</ResponseField>
+
+<ResponseField name="examResult.strengths" type="array">
+  Array of identified strengths from hardcoded mapping
+</ResponseField>
+
+<ResponseField name="examResult.areasForImprovement" type="array">
+  Array of areas needing improvement from hardcoded mapping
+</ResponseField>
+
+<ResponseField name="examResult.timestamp" type="string">
+  ISO timestamp when the result was saved
+</ResponseField>
+
+<ResponseField name="studyStreak" type="number">
+  Updated study streak count
+</ResponseField>
+
+<ResponseField name="totalMarks" type="number">
+  Maximum possible marks for the exam (totalQuestions × 4)
+</ResponseField>
+
+<ResponseField name="performanceInsights" type="array">
+  Array of up to 7 recent exam performance summaries
+</ResponseField>
+
+## Score Calculation
+
+### Bar Score
+
+Calculated as 4 marks per correct answer:
+
+```typescript
+const barScore = correctAnswers * 4;
+```
+
+Source: `/workspace/source/src/app/api/exam-results/route.ts:68`
+
+### Percentile
+
+Simple formula based on percentage correct:
+
+```typescript
+const percentile = Math.round((correctAnswers / totalQuestions) * 100);
+```
+
+Source: `/workspace/source/src/app/api/exam-results/route.ts:71`
+
+### Time Management
+
+Average time per question in seconds:
+
+```typescript
+const totalTimeSeconds = totalTimeMinutes * 60;
+const averageTimePerQuestion = totalTimeSeconds / totalQuestions;
+```
+
+Source: `/workspace/source/src/app/api/exam-results/route.ts:74-75`
+
+### Performance Summary
+
+```typescript
+const incorrectAnswers = totalQuestions - correctAnswers;
+const skippedAnswers = 0; // Currently not tracked
+```
+
+Source: `/workspace/source/src/app/api/exam-results/route.ts:78-79`
+
+## Strengths and Improvements Mapping
+
+The endpoint retrieves exam-specific feedback from a hardcoded mapping:
+
+```typescript
+import { examStrengthsAndImprovements } from "@/lib/examStrengthsAndImprovements";
+
+const strengthsAndImprovements = examStrengthsAndImprovements[examId] || {
+  strengths: [],
+  areasForImprovement: [],
+};
+```
+
+Source: `/workspace/source/src/app/api/exam-results/route.ts:3,82-85`
+
+## Performance Insights Tracking
+
+The endpoint maintains a history of up to 7 recent exams:
+
+- **Update Existing**: If `examId` already exists, updates that entry
+- **Add New**: Adds new exam to the array
+- **Limit Enforcement**: Removes oldest entry when array reaches 7 items
+
+Source: `/workspace/source/src/app/api/exam-results/route.ts:117-144`
+
+```typescript
+const existingExamIndex = performanceInsights.findIndex(
+  (exam: any) => exam.examId === examId
+);
+
+if (existingExamIndex !== -1) {
+  // Update existing
+  performanceInsights[existingExamIndex] = { ...updatedData };
+} else {
+  // Add new, remove oldest if >= 7
+  if (performanceInsights.length >= 7) {
+    performanceInsights.shift();
+  }
+  performanceInsights.push({ ...newData });
+}
+```
+
+## Study Streak Logic
+
+Streak increments only on new study days:
+
+```typescript
+const today = new Date().toISOString().split("T")[0];
+const lastStudyDate = userData.lastStudyDate || "";
+let studyStreak = userData.studyStreak || 0;
+
+if (lastStudyDate !== today) {
+  studyStreak += 1; // Only increment if not already studied today
+}
+```
+
+Source: `/workspace/source/src/app/api/exam-results/route.ts:104-111`
+
+## Example Request
+
+```bash
+curl -X POST 'https://api.lsattraining.com/api/exam-results?uuid=user123' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "examId": "bar_exam_2024_july",
+    "totalQuestions": 50,
+    "correctAnswers": 38,
+    "totalTimeMinutes": 90
+  }'
+```
+
+## Example Response
+
+```json
+{
+  "message": "Exam results saved successfully",
+  "examResult": {
+    "examId": "bar_exam_2024_july",
+    "barScore": 152,
+    "percentile": 76,
+    "totalQuestions": 50,
+    "correctAnswers": 38,
+    "incorrectAnswers": 12,
+    "skippedAnswers": 0,
+    "totalTimeMinutes": 90,
+    "averageTimePerQuestion": 108,
+    "strengths": [
+      "Constitutional Law",
+      "Contract Analysis",
+      "Legal Writing"
+    ],
+    "areasForImprovement": [
+      "Criminal Procedure",
+      "Evidence Rules",
+      "Time Management"
+    ],
+    "timestamp": "2024-03-03T15:45:00.000Z"
+  },
+  "studyStreak": 12,
+  "totalMarks": 200,
+  "performanceInsights": [
+    {
+      "examId": "bar_exam_2024_july",
+      "totalQuestions": 50,
+      "correctAnswers": 38,
+      "totalTimeMinutes": 90,
+      "timestamp": "2024-03-03T15:45:00.000Z"
+    },
+    {
+      "examId": "bar_exam_2024_feb",
+      "totalQuestions": 50,
+      "correctAnswers": 35,
+      "totalTimeMinutes": 95,
+      "timestamp": "2024-02-15T10:30:00.000Z"
+    }
+  ]
+}
+```
+
+## Error Responses
+
+<ResponseField name="error" type="string">
+  Error message describing what went wrong
+</ResponseField>
+
+### 400 Bad Request
+
+```json
+{
+  "error": "UUID is required"
+}
+```
+
+```json
+{
+  "error": "Invalid JSON format"
+}
+```
+
+```json
+{
+  "error": "Missing required fields"
+}
+```
+
+### 404 Not Found
+
+```json
+{
+  "error": "User not found"
+}
+```
+
+### 500 Internal Server Error
+
+```json
+{
+  "error": "Failed to save exam results"
+}
+```
+
+## Firestore Update
+
+The endpoint updates the following fields in the user document:
+
+```typescript
+await userRef.update({
+  examResult,              // Complete exam result object
+  studyStreak,            // Updated streak
+  lastStudyDate: today,   // Current date (YYYY-MM-DD)
+  totalMarks,             // Total possible marks
+  performanceInsights,    // Array of recent exams (max 7)
+});
+```
+
+Source: `/workspace/source/src/app/api/exam-results/route.ts:147-153`
+
+## Implementation Details
+
+- **Database**: Firebase Firestore
+- **Hardcoded Feedback**: Uses `examStrengthsAndImprovements` mapping
+- **History Limit**: Maintains maximum 7 performance insights
+- **Streak Logic**: Increments only on new study days
+- **Score Formula**: 4 marks per correct answer
+- **Percentile**: Based on simple percentage correct
+- **UUID Processing**: Trims whitespace from UUID
+
+## Use Cases
+
+- **Progress Tracking**: Monitor improvement over multiple exams
+- **Performance Analysis**: Identify consistent strengths and weaknesses
+- **Time Management**: Track pacing and time efficiency
+- **Motivation**: Maintain study streaks
+- **Goal Setting**: Use percentile and bar score for target setting
+
+Source: `/workspace/source/src/app/api/exam-results/route.ts`

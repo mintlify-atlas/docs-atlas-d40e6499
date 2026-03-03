@@ -1,0 +1,107 @@
+---
+title: 'AI Coach Chat'
+api: 'POST /api/plan/ai-coach'
+description: 'Get personalized bar exam coaching advice from an AI tutor powered by OpenAI GPT-3.5 Turbo'
+---
+
+## Overview
+
+This endpoint provides personalized bar exam coaching through an AI assistant. It uses OpenAI's GPT-3.5 Turbo model to deliver concise, bar exam-related responses focused on legal principles, case law, and exam strategies.
+
+## Authentication
+
+Requires a valid user UUID passed as a query parameter.
+
+## Request
+
+<ParamField query="uuid" type="string" required>
+  Unique identifier for the user requesting coaching
+</ParamField>
+
+### Body Parameters
+
+<ParamField body="message" type="string" required>
+  The user's question or message to the AI coach
+</ParamField>
+
+## Response
+
+<ResponseField name="response" type="string">
+  AI-generated coaching response (2-3 sentences, limited to 100 tokens)
+</ResponseField>
+
+## OpenAI Integration
+
+The endpoint uses OpenAI's Chat Completions API with the following configuration:
+
+- **Model**: `gpt-3.5-turbo`
+- **System Prompt**: Configured as a helpful AI coach specializing in bar exam preparation
+- **Max Tokens**: 100 (ensures brief, focused responses)
+- **Response Format**: Concise answers limited to 2-3 sentences
+- **Focus Areas**: Legal principles, case law, and exam strategies
+
+Source: `/workspace/source/src/app/api/plan/ai-coach/route.ts:26-37`
+
+## Example Request
+
+```bash
+curl -X POST 'https://api.lsattraining.com/api/plan/ai-coach?uuid=user123' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "message": "What is the best strategy for tackling contract law essays?"
+  }'
+```
+
+## Example Response
+
+```json
+{
+  "response": "For contract law essays, use the IRAC method (Issue, Rule, Application, Conclusion) and always identify offer, acceptance, and consideration. Focus on spotting UCC vs. common law distinctions, as this is a frequent testing point. Practice time management by allocating 30 minutes per essay question."
+}
+```
+
+## Use Cases
+
+- **Study Strategy**: Get advice on how to approach different subjects
+- **Legal Concepts**: Clarify complex legal principles
+- **Exam Tips**: Receive exam-specific strategies and techniques
+- **Case Law**: Understand key cases and their applications
+- **Time Management**: Learn how to efficiently allocate study time
+
+## Error Responses
+
+<ResponseField name="error" type="string">
+  Error message describing what went wrong
+</ResponseField>
+
+### 400 Bad Request
+
+```json
+{
+  "error": "UUID and message are required"
+}
+```
+
+### 500 Internal Server Error
+
+```json
+{
+  "error": "Failed to process chat message"
+}
+```
+
+## Response Characteristics
+
+- **Brevity**: Responses are limited to 2-3 sentences for quick, actionable advice
+- **Relevance**: All responses are bar exam-related and focused on legal topics
+- **Accuracy**: Powered by GPT-3.5 Turbo for accurate legal information
+- **Actionable**: Provides specific, practical guidance students can immediately apply
+
+## Implementation Details
+
+- **AI Provider**: OpenAI
+- **API Key**: Retrieved from `process.env.OPENAI_API_KEY`
+- **Token Limit**: 100 tokens ensures fast responses and cost efficiency
+- **System Role**: Specialized system prompt ensures bar exam-focused responses
+
+Source: `/workspace/source/src/app/api/plan/ai-coach/route.ts`

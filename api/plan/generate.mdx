@@ -1,0 +1,205 @@
+---
+title: 'Generate Study Plan'
+api: 'POST /api/plan/generate-plan'
+description: 'Generate a personalized bar exam study plan based on user preferences and update user streak'
+---
+
+## Overview
+
+This endpoint generates and saves a personalized bar exam study plan for a user. It updates the user's profile in Firestore with study preferences, calculates and maintains study streaks, and returns the updated user data.
+
+## Authentication
+
+Requires a valid user UUID passed as a query parameter.
+
+## Request
+
+<ParamField query="uuid" type="string" required>
+  Unique identifier for the user
+</ParamField>
+
+### Body Parameters
+
+<ParamField body="barExamTestDate" type="string" required>
+  Target date for the bar exam (ISO format)
+</ParamField>
+
+<ParamField body="currentScore" type="number" required>
+  User's current bar exam score or baseline assessment score
+</ParamField>
+
+<ParamField body="targetScore" type="number" required>
+  Desired bar exam score
+</ParamField>
+
+<ParamField body="weeklyHours" type="number" required>
+  Available study hours per week
+</ParamField>
+
+<ParamField body="challengingAreas" type="array" required>
+  List of challenging subject areas for the user
+</ParamField>
+
+<ParamField body="specificAreas" type="array" required>
+  Specific topics the user wants to focus on
+</ParamField>
+
+<ParamField body="preferredSchedule" type="string" required>
+  User's preferred study schedule (e.g., "Morning", "Evening", "Weekends")
+</ParamField>
+
+<ParamField body="barExamPreparationMaterial" type="string" required>
+  Preparation materials the user is using
+</ParamField>
+
+<ParamField body="additionalInformation" type="string" required>
+  Any additional information or notes from the user
+</ParamField>
+
+## Response
+
+<ResponseField name="barExamTestDate" type="string">
+  The user's bar exam test date
+</ResponseField>
+
+<ResponseField name="currentScore" type="number">
+  Current bar exam score
+</ResponseField>
+
+<ResponseField name="targetScore" type="number">
+  Target bar exam score
+</ResponseField>
+
+<ResponseField name="weeklyHours" type="number">
+  Available study hours per week
+</ResponseField>
+
+<ResponseField name="challengingAreas" type="array">
+  List of challenging areas
+</ResponseField>
+
+<ResponseField name="specificAreas" type="array">
+  Specific focus areas
+</ResponseField>
+
+<ResponseField name="preferredSchedule" type="string">
+  Preferred study schedule
+</ResponseField>
+
+<ResponseField name="barExamPreparationMaterial" type="string">
+  Preparation materials being used
+</ResponseField>
+
+<ResponseField name="additionalInformation" type="string">
+  Additional user notes
+</ResponseField>
+
+<ResponseField name="currentStreak" type="number">
+  Current consecutive days of study plan requests
+</ResponseField>
+
+<ResponseField name="lastRequestDate" type="string">
+  Date of the last study plan request (YYYY-MM-DD format)
+</ResponseField>
+
+<ResponseField name="updatedAt" type="string">
+  Timestamp of the last update (ISO format)
+</ResponseField>
+
+## Streak Calculation Logic
+
+The endpoint implements smart streak tracking:
+
+- **Same Day**: If a request is made on the same day, the streak remains unchanged
+- **Next Day**: If a request is made the next consecutive day, the streak increments by 1
+- **Gap**: If there's a gap of more than one day, the streak resets to 1
+
+Source: `/workspace/source/src/app/api/plan/generate-plan/route.ts:60-87`
+
+## Example Request
+
+```bash
+curl -X POST 'https://api.lsattraining.com/api/plan/generate-plan?uuid=user123' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "barExamTestDate": "2024-07-30",
+    "currentScore": 145,
+    "targetScore": 165,
+    "weeklyHours": 20,
+    "challengingAreas": ["Contracts", "Torts"],
+    "specificAreas": ["Case Analysis", "Legal Writing"],
+    "preferredSchedule": "Morning",
+    "barExamPreparationMaterial": "Barbri",
+    "additionalInformation": "Need help with essay writing"
+  }'
+```
+
+## Example Response
+
+```json
+{
+  "barExamTestDate": "2024-07-30",
+  "currentScore": 145,
+  "targetScore": 165,
+  "weeklyHours": 20,
+  "challengingAreas": ["Contracts", "Torts"],
+  "specificAreas": ["Case Analysis", "Legal Writing"],
+  "preferredSchedule": "Morning",
+  "barExamPreparationMaterial": "Barbri",
+  "additionalInformation": "Need help with essay writing",
+  "currentStreak": 5,
+  "lastRequestDate": "2024-03-03",
+  "updatedAt": "2024-03-03T10:30:00.000Z"
+}
+```
+
+## Error Responses
+
+<ResponseField name="error" type="string">
+  Error message describing what went wrong
+</ResponseField>
+
+### 400 Bad Request
+
+```json
+{
+  "error": "UUID is required"
+}
+```
+
+```json
+{
+  "error": "Missing required fields"
+}
+```
+
+### 404 Not Found
+
+```json
+{
+  "error": "User not found"
+}
+```
+
+### 500 Internal Server Error
+
+```json
+{
+  "error": "Failed to update Firestore document"
+}
+```
+
+```json
+{
+  "error": "Failed to update user data"
+}
+```
+
+## Implementation Details
+
+- **Database**: Uses Firebase Firestore for data persistence
+- **Merge Strategy**: Preserves existing user fields while updating plan-specific data
+- **Validation**: All required fields are validated before processing
+- **UUID Processing**: Trims whitespace from UUID for consistency
+
+Source: `/workspace/source/src/app/api/plan/generate-plan/route.ts`

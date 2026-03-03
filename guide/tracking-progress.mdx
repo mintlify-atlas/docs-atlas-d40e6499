@@ -1,0 +1,287 @@
+---
+title: Tracking Your Progress
+description: Understand dashboard metrics, study streaks, and performance insights
+---
+
+## Dashboard Overview
+
+Your dashboard is the central hub for monitoring your BAR exam preparation progress. It displays real-time metrics, study plans, and performance insights.
+
+## Key Metrics
+
+The dashboard tracks four primary metrics displayed as cards:
+
+### Practice Questions Completed
+
+- **What it shows**: Total number of practice questions you've answered
+- **How it's tracked**: Automatically increments with each question answered in practice sessions
+- **Why it matters**: Demonstrates your overall engagement and practice volume
+- **Goal**: Aim for consistent daily practice to build mastery
+
+### Current Score
+
+- **What it shows**: Your current BAR exam score (set during onboarding)
+- **Range**: 260-400
+- **How to update**: Use the exam result dialog after your exam date passes
+- **Display**: Shows your current performance level
+
+### Target Score
+
+- **What it shows**: Your goal BAR exam score (set during onboarding)
+- **Range**: 260-400
+- **Additional info**: Shows "X points to go" - the gap between current and target
+- **Purpose**: Keeps your goal visible and motivates progress
+
+### Study Streak
+
+- **What it shows**: Consecutive days you've practiced
+- **Display format**: "X days"
+- **How it's tracked**: Based on your `lastStudyDate` field
+- **How to maintain**: Practice at least once per day
+- **Why it matters**: Consistency is key to BAR exam success
+
+## Exam Countdown Timer
+
+Located in the top-right of your dashboard:
+
+### Before Exam Date
+
+Displays a live countdown with four segments:
+
+- **Days**: Days remaining until exam
+- **Hours**: Hours remaining in current day
+- **Minutes**: Minutes remaining in current hour
+- **Seconds**: Real-time seconds countdown
+
+The timer updates every second to keep your deadline visible.
+
+### After Exam Date Passes
+
+When your exam date arrives or passes:
+
+1. **Dialog Appears**: Automatic prompt to update your exam status
+2. **Exam Result Options**:
+   - Passed
+   - Failed
+   - Prefer not to say
+3. **Required Updates**:
+   - New exam date (calendar picker)
+   - Current score (260-400)
+   - Target score (260-400, must be ≥ current score)
+4. **Update Button**: Saves your new information
+
+After submitting, the dashboard refreshes with:
+- New countdown timer
+- Updated scores
+- Reset study plan based on new timeline
+
+## Today's Study Plan
+
+Your personalized daily task list:
+
+### Study Plan Display
+
+- **Section Title**: "Today's Study Plan"
+- **Description**: "Your personalized study schedule for today"
+- **Task List**: Shows 3-5 tasks based on your onboarding profile
+- **Task Examples**:
+  - "Review Constitutional Law fundamentals"
+  - "Complete 10 practice questions in Contracts"
+  - "Study weak areas identified in recent practice"
+  - "Take a timed practice section"
+
+### Task Completion
+
+<Steps>
+  <Step title="View Tasks">
+    Each task appears as a card with:
+    - Task description
+    - Checkbox for completion status
+  </Step>
+
+  <Step title="Mark Complete">
+    Click the checkbox to mark a task as completed:
+    - Task text gets strikethrough styling
+    - Checkbox fills with black checkmark
+    - Card border becomes dashed
+    - Card opacity reduces to 50%
+  </Step>
+
+  <Step title="Track Progress">
+    Completed tasks are tracked locally during your session. Use "View Full Study Plan" to see your complete multi-week plan.
+  </Step>
+</Steps>
+
+## Performance Insights
+
+Displays your exam performance across different practice sessions.
+
+### What's Tracked
+
+Each performance insight includes:
+
+- **Exam ID**: Identifier for the practice exam/session
+- **Total Questions**: Number of questions in that session
+- **Correct Answers**: How many you got right
+- **Accuracy Percentage**: (Correct ÷ Total) × 100
+- **Time Taken**: Total minutes spent on the exam
+- **Timestamp**: When the session occurred
+
+### Visualization
+
+Performance insights are displayed as:
+
+- **Progress bars**: Visual representation of accuracy percentage
+- **Percentage score**: Numerical accuracy shown (e.g., "85%")
+- **Exam identifier**: Shows which exam or section
+- **Sorted by date**: Most recent sessions appear at the top
+
+### Empty State
+
+If you haven't taken any practice exams:
+- Message displays: "No performance data available."
+- Encourages you to take mock exams or practice sessions
+
+## Practice History
+
+Tracks all your practice sessions over time.
+
+### Session Information
+
+Each practice session shows:
+
+- **Date**: When you practiced (e.g., "Jan 15")
+- **Section**: Which subject you practiced (e.g., "Constitutional Law")
+- **Question IDs**: All questions you encountered (saved in backend)
+- **Responses**: Your answers and correctness (saved in backend)
+- **Score**: Percentage correct for that session
+- **Time Taken**: Duration in seconds
+
+### Display Format
+
+- Sessions listed in reverse chronological order (most recent first)
+- Shows last several sessions on dashboard
+- Each row contains:
+  - Date (abbreviated format)
+  - Subject section name
+  - Border separator between entries
+
+### Empty State
+
+Before starting practice sessions:
+- Shows "Your progress over the last 0 sessions"
+- Encourages you to start practicing
+
+## Suggested Practice Areas
+
+Recommendations based on your focus areas from onboarding.
+
+### Featured Subjects
+
+Three main subject cards:
+
+1. **Constitutional Law**
+   - "Master fundamental rights and judicial review"
+   - Links to Constitutional Law question bank
+   - Shows "20+ practice sets"
+
+2. **Contracts**
+   - "Understand formation, breach, and remedies"
+   - Links to Contracts question bank
+   - Shows "20+ practice sets"
+
+3. **Criminal Law**
+   - "Learn elements of crimes and defenses"
+   - Links to Criminal Law question bank
+   - Shows "20+ practice sets"
+
+Each card is clickable and navigates directly to that subject's practice questions.
+
+## Continue Your Preparation
+
+Quick access to advanced features:
+
+### AI Tutor
+- **Badge**: "New"
+- **Description**: Get personalized feedback on your answers
+- **Link**: Navigate to AI Coach feature
+
+### Question Bank
+- **Badge**: "Popular"
+- **Description**: 500+ practice questions with explanations
+- **Link**: Access full question bank
+
+### Mock Exams
+- **Badge**: "Pro Feature"
+- **Description**: Simulate real exam conditions
+- **Link**: Take full-length practice exams
+- **Note**: May require premium subscription
+
+## Understanding Your Data
+
+<Accordion title="How is my study streak calculated?">
+  Your study streak counts consecutive days with at least one practice session. It resets to 0 if you skip a day. The streak is based on the `lastStudyDate` field, which updates whenever you complete practice questions.
+</Accordion>
+
+<Accordion title="What counts as a practice question?">
+  Any question answered in a practice session counts toward your Practice Questions metric. This includes:
+  - Question bank practice
+  - Mock exam questions
+  - Timed practice sections
+  
+  Bookmarked or viewed-but-not-answered questions don't increment this count.
+</Accordion>
+
+<Accordion title="How often does my dashboard update?">
+  - **Study streak**: Updates once per day when you practice
+  - **Practice questions**: Updates immediately after each session
+  - **Performance insights**: Updates after completing exams/sessions
+  - **Countdown timer**: Updates every second in real-time
+</Accordion>
+
+<Accordion title="Can I manually adjust my metrics?">
+  You can update:
+  - Current Score (via exam result dialog)
+  - Target Score (via exam result dialog)
+  - Exam Date (via exam result dialog)
+  
+  You cannot manually adjust:
+  - Practice Questions count (auto-tracked)
+  - Study Streak (auto-calculated)
+  - Performance insights (generated from practice data)
+</Accordion>
+
+<Accordion title="Where is my practice history stored?">
+  All practice history is stored securely in your user profile:
+  - Session data includes responses, timestamps, scores
+  - Accessible via the Practice History section
+  - Used to generate performance insights
+  - Retained indefinitely for progress tracking
+</Accordion>
+
+## Progress Tracking Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Daily Check-ins" icon="calendar-check">
+    Review your dashboard daily to maintain your study streak and stay motivated by visible progress.
+  </Card>
+  
+  <Card title="Set Milestones" icon="flag">
+    Use the "points to go" metric to set weekly milestones. Break your target into smaller, achievable goals.
+  </Card>
+  
+  <Card title="Analyze Performance" icon="chart-line">
+    Regularly review performance insights to identify subjects needing more practice and track improvement trends.
+  </Card>
+  
+  <Card title="Adjust Your Plan" icon="sliders">
+    If you consistently miss tasks or struggle with certain subjects, update your focus areas or study hours.
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+- Start [Practice Sessions](/guide/practice-sessions) to increase your metrics
+- Review your complete study plan for weekly goals
+- Consider [Upgrading](/guide/subscription-plans) for advanced analytics
+- Take a mock exam to generate detailed performance insights

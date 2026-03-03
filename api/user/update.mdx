@@ -1,0 +1,213 @@
+---
+title: 'Update User Data'
+api: 'PUT /api/updateuserdata'
+description: 'Update user exam information and scores'
+---
+
+## Overview
+
+Updates user exam information including test dates, scores, and exam results. This endpoint validates score ranges and ensures data integrity before persisting changes to Firestore.
+
+## Query Parameters
+
+<ParamField query="uuid" type="string" required>
+  The unique identifier for the user
+</ParamField>
+
+## Request Body
+
+<ParamField body="barExamTestDate" type="string" required>
+  The scheduled bar exam test date
+</ParamField>
+
+<ParamField body="currentScore" type="number" required>
+  Current practice score. Must be between 260 and 400.
+</ParamField>
+
+<ParamField body="targetScore" type="number" required>
+  Target score for the bar exam. Must be between 260 and 400, and greater than or equal to currentScore.
+</ParamField>
+
+<ParamField body="examResultFinal" type="string" optional>
+  Final exam result status. Accepted values:
+  - `"pass"`: User passed the exam
+  - `"fail"`: User failed the exam
+  - `"prefer-not"`: User prefers not to disclose
+</ParamField>
+
+## Request
+
+```bash cURL
+curl -X PUT "https://api.example.com/api/updateuserdata?uuid=user123" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "barExamTestDate": "2026-07-28",
+    "currentScore": 310,
+    "targetScore": 350,
+    "examResultFinal": "pass"
+  }'
+```
+
+## Validation Rules
+
+1. **Score Range**: Both `currentScore` and `targetScore` must be between 260 and 400
+2. **Score Relationship**: `targetScore` must be greater than or equal to `currentScore`
+3. **User Existence**: User document must exist in Firestore
+4. **Valid JSON**: Request body must be valid JSON format
+
+## Response
+
+Returns the complete updated user document with all fields.
+
+<ResponseField name="barExamTestDate" type="string">
+  The updated exam test date
+</ResponseField>
+
+<ResponseField name="currentScore" type="number">
+  The updated current score
+</ResponseField>
+
+<ResponseField name="targetScore" type="number">
+  The updated target score
+</ResponseField>
+
+<ResponseField name="updatedAt" type="string">
+  ISO 8601 timestamp of when the update occurred
+</ResponseField>
+
+<ResponseField name="examResultFinal" type="object" optional>
+  Final exam result (only present if provided in request)
+  
+  <Expandable title="properties">
+    <ResponseField name="passed" type="boolean | null">
+      - `true`: User passed the exam
+      - `false`: User failed the exam
+      - `null`: User prefers not to say
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Response Example
+
+```json
+{
+  "barExamTestDate": "2026-07-28",
+  "currentScore": 310,
+  "targetScore": 350,
+  "updatedAt": "2026-03-03T10:30:00.000Z",
+  "examResultFinal": {
+    "passed": true
+  },
+  "weeklyHours": 20,
+  "onboarded": true,
+  "progress": {
+    "constitutionalLaw": 45,
+    "contracts": 38,
+    "criminalLaw": 52,
+    "totalTimeSpent": 1200,
+    "testAttempts": 5,
+    "lastUpdated": "2026-03-02T18:45:00.000Z"
+  },
+  "StudyStreak": 7,
+  "PracticeQuestions": 234,
+  "questionDataKey": "decent"
+}
+```
+
+## Error Responses
+
+<ResponseField name="error" type="string">
+  Error message describing what went wrong
+</ResponseField>
+
+### 400 Bad Request - Missing UUID
+
+Returned when UUID is not provided in query parameters.
+
+```json
+{
+  "error": "UUID is required"
+}
+```
+
+### 400 Bad Request - Invalid JSON
+
+Returned when the request body is not valid JSON.
+
+```json
+{
+  "error": "Invalid JSON format"
+}
+```
+
+### 400 Bad Request - Missing Required Fields
+
+Returned when required fields are missing from the request body.
+
+```json
+{
+  "error": "Missing required fields"
+}
+```
+
+Required fields:
+- barExamTestDate
+- currentScore
+- targetScore
+
+### 400 Bad Request - Invalid Score Range
+
+Returned when scores are outside the valid range (260-400).
+
+```json
+{
+  "error": "Scores must be between 260 and 400"
+}
+```
+
+### 400 Bad Request - Invalid Score Relationship
+
+Returned when target score is less than current score.
+
+```json
+{
+  "error": "Target score must be greater than or equal to current score"
+}
+```
+
+### 404 Not Found
+
+Returned when the user document does not exist.
+
+```json
+{
+  "error": "User not found"
+}
+```
+
+### 500 Internal Server Error - Update Failed
+
+Returned when Firestore update operation fails.
+
+```json
+{
+  "error": "Failed to update user data"
+}
+```
+
+### 500 Internal Server Error - General Error
+
+Returned for unexpected server errors.
+
+```json
+{
+  "error": "Internal server error"
+}
+```
+
+## Notes
+
+- The endpoint uses merge strategy when updating, preserving existing fields not included in the request
+- The `updatedAt` timestamp is automatically set to the current time
+- The `examResultFinal` field is only added if explicitly provided in the request
+- All score values are validated as integers within the specified range

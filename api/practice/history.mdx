@@ -1,0 +1,288 @@
+---
+title: 'Practice History'
+api: 'POST /api/history'
+description: 'Save practice session results and update user statistics including streaks, progress, and bookmarks'
+---
+
+## Overview
+
+This endpoint records practice session results and updates comprehensive user statistics in Firestore. It manages practice history (limited to 3 sessions, one per section), tracks study streaks, updates progress metrics, and manages bookmarked questions.
+
+## Authentication
+
+Requires a valid user UUID passed as a query parameter.
+
+## Request
+
+<ParamField query="uuid" type="string" required>
+  Unique identifier for the user
+</ParamField>
+
+### Body Parameters
+
+<ParamField body="sessionId" type="string" required>
+  Unique identifier for this practice session
+</ParamField>
+
+<ParamField body="timestamp" type="string" required>
+  ISO timestamp when the session was completed
+</ParamField>
+
+<ParamField body="section" type="string" required>
+  Section practiced: "analytical-reasoning", "logical-reasoning", or "reading-comprehension"
+</ParamField>
+
+<ParamField body="questionIds" type="array" required>
+  Array of question IDs attempted in this session
+</ParamField>
+
+<ParamField body="responses" type="object" required>
+  Object mapping question IDs to user responses
+</ParamField>
+
+<ParamField body="score" type="number" required>
+  Number of correct answers (can be 0)
+</ParamField>
+
+<ParamField body="totalQuestions" type="number" required>
+  Total number of questions in the session
+</ParamField>
+
+<ParamField body="timeTaken" type="number" required>
+  Time taken for the session in seconds (can be 0)
+</ParamField>
+
+<ParamField body="bookmarkedQuestionIds" type="array" required>
+  Array of question IDs that were bookmarked during this session
+</ParamField>
+
+## Response
+
+<ResponseField name="practiceHistory" type="array">
+  Updated practice history array (max 3 sessions, one per section)
+</ResponseField>
+
+<ResponseField name="bookmarkedQuestions" type="array">
+  Updated array of all bookmarked question IDs (unique values only)
+</ResponseField>
+
+<ResponseField name="progress" type="object">
+  Updated progress tracking object with fields:
+  - `analyticalReasoning`: Number of analytical reasoning sessions completed
+  - `logicalReasoning`: Number of logical reasoning sessions completed
+  - `readingComprehension`: Number of reading comprehension sessions completed
+  - `testAttempts`: Total number of test attempts
+  - `totalTimeSpent`: Total time spent practicing (in seconds)
+</ResponseField>
+
+<ResponseField name="PracticeQuestions" type="number">
+  Total number of practice questions completed
+</ResponseField>
+
+<ResponseField name="StudyStreak" type="number">
+  Current consecutive days of practice
+</ResponseField>
+
+<ResponseField name="lastStudyDate" type="string">
+  Date of last study session (YYYY-MM-DD format)
+</ResponseField>
+
+<ResponseField name="updatedAt" type="string">
+  Timestamp of the last update (ISO format)
+</ResponseField>
+
+## Practice History Management
+
+The endpoint maintains a maximum of 3 practice sessions in history:
+
+1. **Section Replacement**: Replaces existing session for the same section
+2. **Limit Enforcement**: If more than 3 sessions exist, removes the oldest
+3. **One Per Section**: Ensures only one session per section is stored
+
+Source: `/workspace/source/src/app/api/history/route.ts:94-104`
+
+## Study Streak Calculation
+
+Same-day logic as the study plan endpoint:
+
+- **Same Day**: Streak remains unchanged if practicing on the same day
+- **Next Day**: Streak increments by 1 for consecutive day practice
+- **Gap**: Streak resets to 1 if there's a gap of more than one day
+
+Source: `/workspace/source/src/app/api/history/route.ts:134-156`
+
+## Progress Tracking
+
+The endpoint automatically increments section-specific counters:
+
+- `analyticalReasoning`: +1 when `section === "analytical-reasoning"`
+- `logicalReasoning`: +1 when `section === "logical-reasoning"`
+- `readingComprehension`: +1 when `section === "reading-comprehension"`
+- `testAttempts`: +1 for every session
+- `totalTimeSpent`: Accumulates time from all sessions
+
+Source: `/workspace/source/src/app/api/history/route.ts:116-123`
+
+## Example Request
+
+```bash
+curl -X POST 'https://api.lsattraining.com/api/history?uuid=user123' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "sessionId": "session_abc123",
+    "timestamp": "2024-03-03T14:30:00.000Z",
+    "section": "logical-reasoning",
+    "questionIds": ["q1", "q2", "q3", "q4", "q5"],
+    "responses": {
+      "q1": "A",
+      "q2": "C",
+      "q3": "B",
+      "q4": "D",
+      "q5": "A"
+    },
+    "score": 4,
+    "totalQuestions": 5,
+    "timeTaken": 600,
+    "bookmarkedQuestionIds": ["q2", "q5"]
+  }'
+```
+
+## Example Response
+
+```json
+{
+  "practiceHistory": [
+    {
+      "sessionId": "session_abc123",
+      "timestamp": "2024-03-03T14:30:00.000Z",
+      "section": "logical-reasoning",
+      "questionIds": ["q1", "q2", "q3", "q4", "q5"],
+      "responses": {
+        "q1": "A",
+        "q2": "C",
+        "q3": "B",
+        "q4": "D",
+        "q5": "A"
+      },
+      "score": 4,
+      "totalQuestions": 5,
+      "timeTaken": 600
+    },
+    {
+      "sessionId": "session_xyz789",
+      "timestamp": "2024-03-02T10:00:00.000Z",
+      "section": "analytical-reasoning",
+      "score": 3,
+      "totalQuestions": 5,
+      "timeTaken": 720
+    }
+  ],
+  "bookmarkedQuestions": ["q2", "q5", "q15", "q22"],
+  "progress": {
+    "analyticalReasoning": 2,
+    "logicalReasoning": 5,
+    "readingComprehension": 3,
+    "testAttempts": 10,
+    "totalTimeSpent": 7200
+  },
+  "PracticeQuestions": 50,
+  "StudyStreak": 7,
+  "lastStudyDate": "2024-03-03",
+  "updatedAt": "2024-03-03T14:30:15.000Z"
+}
+```
+
+## Bookmark Management
+
+Bookmarks are managed with deduplication:
+
+```typescript
+const updatedBookmarkedQuestions = [
+  ...new Set([...(userData.bookmarkedQuestions || []), ...bookmarkedQuestionIds])
+];
+```
+
+Source: `/workspace/source/src/app/api/history/route.ts:109-111`
+
+This ensures:
+- Existing bookmarks are preserved
+- New bookmarks are added
+- No duplicate question IDs exist in the array
+
+## Error Responses
+
+<ResponseField name="error" type="string">
+  Error message describing what went wrong
+</ResponseField>
+
+### 400 Bad Request
+
+```json
+{
+  "error": "UUID is required"
+}
+```
+
+```json
+{
+  "error": "Invalid JSON format"
+}
+```
+
+```json
+{
+  "error": "Missing required fields"
+}
+```
+
+### 404 Not Found
+
+```json
+{
+  "error": "User not found"
+}
+```
+
+### 500 Internal Server Error
+
+```json
+{
+  "error": "Failed to update Firestore document"
+}
+```
+
+```json
+{
+  "error": "Failed to update user data"
+}
+```
+
+## Data Validation
+
+The endpoint validates all required fields before processing:
+
+```typescript
+if (
+  !sessionId ||
+  !timestamp ||
+  !section ||
+  !questionIds ||
+  !responses ||
+  score === undefined || // Allows score = 0
+  !totalQuestions ||
+  timeTaken === undefined // Allows timeTaken = 0
+) {
+  return error;
+}
+```
+
+Source: `/workspace/source/src/app/api/history/route.ts:52-74`
+
+## Implementation Details
+
+- **Database**: Firebase Firestore with merge strategy
+- **UUID Processing**: Trims whitespace from UUID parameter
+- **Atomic Updates**: All user data updates are atomic via Firestore merge
+- **Preserves Existing Data**: Uses spread operator to maintain other user fields
+
+Source: `/workspace/source/src/app/api/history/route.ts`

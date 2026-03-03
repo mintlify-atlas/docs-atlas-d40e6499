@@ -1,0 +1,219 @@
+---
+title: 'Complete Onboarding'
+api: 'POST /api/onboarding'
+description: 'Complete user onboarding and create personalized study plan'
+---
+
+## Overview
+
+Completes the user onboarding process by collecting study preferences and exam information. This endpoint creates a personalized study plan based on the user's current score and initializes their profile with default progress tracking, performance insights, and study data.
+
+## Query Parameters
+
+<ParamField query="uuid" type="string" required>
+  The unique identifier for the user
+</ParamField>
+
+## Request Body
+
+<ParamField body="barExamTestDate" type="string" required>
+  The scheduled bar exam test date (ISO 8601 format recommended)
+</ParamField>
+
+<ParamField body="targetScore" type="number" required>
+  Desired target score for the bar exam (typically 260-400)
+</ParamField>
+
+<ParamField body="studyHours" type="number" required>
+  Number of hours per week the user can commit to studying
+</ParamField>
+
+<ParamField body="currentScore" type="number" required>
+  User's current practice test score. Used to determine study plan:
+  - 360+: "amazing" plan
+  - 320-359: "good" plan
+  - 280-319: "decent" plan
+  - 240-279: "bad" plan
+  - Below 240: "terrible" plan
+</ParamField>
+
+<ParamField body="challengingAreas" type="array" required>
+  Array of law topics the user finds challenging (e.g., ["Contracts", "Torts"])
+</ParamField>
+
+<ParamField body="focusAreas" type="array" required>
+  Array of specific areas the user wants to focus on
+</ParamField>
+
+<ParamField body="barExamPreparationMaterial" type="string" required>
+  The preparation materials being used (e.g., "Barbri", "Themis", "Kaplan")
+</ParamField>
+
+<ParamField body="additionalInfo" type="string" optional>
+  Any additional information or notes about study preferences
+</ParamField>
+
+## Request
+
+```bash cURL
+curl -X POST "https://api.example.com/api/onboarding?uuid=user123" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "barExamTestDate": "2026-07-28",
+    "targetScore": 350,
+    "studyHours": 20,
+    "currentScore": 290,
+    "challengingAreas": ["Contracts", "Torts"],
+    "focusAreas": ["Constitutional Law", "Criminal Procedure"],
+    "barExamPreparationMaterial": "Barbri",
+    "additionalInfo": "Looking to improve essay writing skills"
+  }'
+```
+
+## Response
+
+<ResponseField name="success" type="boolean">
+  Indicates whether the onboarding was successful
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Success message confirming study plan creation
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  Onboarding data and generated study plan
+  
+  <Expandable title="properties">
+    <ResponseField name="barExamTestDate" type="string">
+      The exam date provided
+    </ResponseField>
+    
+    <ResponseField name="targetScore" type="number">
+      The target score provided
+    </ResponseField>
+    
+    <ResponseField name="currentScore" type="number">
+      The current score provided
+    </ResponseField>
+    
+    <ResponseField name="studyHours" type="number">
+      Weekly study hours commitment
+    </ResponseField>
+    
+    <ResponseField name="challengingAreas" type="array">
+      Challenging areas identified
+    </ResponseField>
+    
+    <ResponseField name="focusAreas" type="array">
+      Focus areas selected
+    </ResponseField>
+    
+    <ResponseField name="additionalInfo" type="string">
+      Additional information provided
+    </ResponseField>
+    
+    <ResponseField name="barExamPreparationMaterial" type="string">
+      Preparation material being used
+    </ResponseField>
+    
+    <ResponseField name="studyPlan" type="object">
+      The generated study plan based on current score
+    </ResponseField>
+    
+    <ResponseField name="completedAt" type="string">
+      ISO 8601 timestamp when onboarding was completed
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Response Example
+
+```json
+{
+  "success": true,
+  "message": "Your study plan has been created successfully",
+  "data": {
+    "barExamTestDate": "2026-07-28",
+    "targetScore": 350,
+    "currentScore": 290,
+    "studyHours": 20,
+    "challengingAreas": ["Contracts", "Torts"],
+    "focusAreas": ["Constitutional Law", "Criminal Procedure"],
+    "additionalInfo": "Looking to improve essay writing skills",
+    "barExamPreparationMaterial": "Barbri",
+    "studyPlan": {
+      "name": "Decent Study Plan",
+      "weeks": 12,
+      "hoursPerWeek": 20
+    },
+    "completedAt": "2026-03-03T10:30:00.000Z"
+  }
+}
+```
+
+## User Data Initialization
+
+This endpoint initializes the following user profile fields:
+
+- **onboarded**: Set to `true`
+- **updatedAt**: Current timestamp
+- **progress**: Initialized with 0% for all law sections (constitutionalLaw, contracts, criminalLaw)
+- **performanceInsights**: Empty array
+- **StudyStreak**: Set to 1
+- **PracticeQuestions**: Set to 0
+- **practiceHistory**: Empty array
+- **bookmarkedQuestions**: Empty array
+- **simulatedExams**: Empty array
+- **essays**: Empty array
+- **payments**: Empty array
+- **questionDataKey**: Set based on current score (terrible/bad/decent/good/amazing)
+
+## Error Responses
+
+<ResponseField name="error" type="string">
+  Error message describing what went wrong
+</ResponseField>
+
+<ResponseField name="details" type="any" optional>
+  Additional error details (only in 500 responses)
+</ResponseField>
+
+### 400 Bad Request - Missing UUID
+
+Returned when UUID is not provided in query parameters.
+
+```json
+{
+  "error": "UUID is required in query parameters"
+}
+```
+
+### 400 Bad Request - Missing Fields
+
+Returned when required fields are missing from the request body.
+
+```json
+{
+  "error": "Missing required fields"
+}
+```
+
+Required fields are:
+- barExamTestDate
+- targetScore
+- studyHours
+- currentScore
+- challengingAreas
+- focusAreas
+- barExamPreparationMaterial
+
+### 500 Internal Server Error
+
+Returned when there's a server-side error saving onboarding data.
+
+```json
+{
+  "error": "Failed to save onboarding data",
+  "details": {}
+}
+```

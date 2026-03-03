@@ -1,0 +1,322 @@
+---
+title: Subscription Plans
+description: Explore pricing tiers and manage your Stripe subscription
+---
+
+## Overview
+
+The LSAT Training Platform offers three subscription tiers to match your preparation needs and budget. All payments are processed securely through Stripe.
+
+## Available Plans
+
+### Free Plan
+
+**Cost**: $0/forever
+
+<Accordion title="Free Plan Features">
+  **What's Included:**
+  - Limited question bank access
+  - 1 simulated BAR exam
+  - Basic performance tracking
+  
+  **What's Not Included:**
+  - AI explanations and tutoring
+  - Personalized study plans
+  - Advanced analytics
+  - Unlimited practice exams
+  
+  **Best For**: Users exploring the platform or with minimal preparation needs.
+</Accordion>
+
+### Weekly Access Plan
+
+**Cost**: $19.99/week (recurring subscription)
+
+**Badge**: POPULAR
+
+<Accordion title="Weekly Plan Features">
+  **Everything in Free, plus:**
+  - Full question bank access
+  - Unlimited simulated BAR exams
+  - Advanced analytics & progress tracking
+  - AI explanations and tutoring
+  - Personalized study plans
+  
+  **Billing**: Automatically renews weekly
+  
+  **Cancellation**: Cancel anytime from your account settings
+  
+  **Best For**: 
+  - Students with upcoming exams (4-12 weeks away)
+  - Users wanting flexible commitment
+  - Budget-conscious learners preferring weekly payments
+</Accordion>
+
+### Full Access Plan
+
+**Cost**: $199 (one-time payment)
+
+<Accordion title="Full Access Features">
+  **Everything in Weekly Access, plus:**
+  - Lifetime access to all features
+  - No recurring charges
+  - Access to future feature updates
+  - Priority support
+  
+  **Best Value**: Equivalent to 10 weeks of weekly subscription
+  
+  **Best For**:
+  - Long-term preparation (3+ months)
+  - Students planning to retake if needed
+  - Users wanting permanent access
+  - Those who prefer one-time payments
+</Accordion>
+
+## Subscription Management with Stripe
+
+### How Payments Work
+
+The platform uses Stripe for secure payment processing:
+
+1. **Secure Checkout**: All payment information is handled by Stripe (PCI-compliant)
+2. **No Stored Cards**: The platform never stores your credit card information
+3. **Encrypted Transactions**: All payment data is encrypted in transit
+4. **International Support**: Accepts cards from most countries
+
+### Subscribing to a Plan
+
+<Steps>
+  <Step title="Choose Your Plan">
+    Navigate to the Subscription page and review the three plan options:
+    
+    - Compare features side-by-side
+    - Consider your exam timeline
+    - Evaluate your budget and commitment level
+  </Step>
+
+  <Step title="Click Subscribe">
+    Select either:
+    
+    - **"Subscribe Weekly"** button for the $19.99/week plan
+    - **"Pay Once"** button for the $199 full access plan
+    
+    The button will show "Processing..." while creating your checkout session.
+  </Step>
+
+  <Step title="Stripe Checkout">
+    You'll be redirected to a secure Stripe checkout page:
+    
+    - **Enter Payment Details**: Card number, expiration, CVV
+    - **Billing Information**: Name and billing address
+    - **Review Total**: Confirm the charge amount
+    - **Payment Methods**: Credit card, debit card, or digital wallets
+  </Step>
+
+  <Step title="Complete Payment">
+    After submitting payment:
+    
+    - Stripe processes your payment securely
+    - You're redirected to the success page
+    - Your account is immediately upgraded
+    - You receive a confirmation email
+  </Step>
+
+  <Step title="Access Premium Features">
+    Upon successful payment:
+    
+    - All premium features unlock immediately
+    - Dashboard shows your new subscription status
+    - No additional steps required
+    - Start using advanced features right away
+  </Step>
+</Steps>
+
+### After Successful Payment
+
+You'll see a confirmation screen with:
+
+- **Success Message**: "Subscription Successful!"
+- **Thank You Note**: Acknowledging your upgrade
+- **Next Steps Section**: Suggestions for what to explore
+- **Premium Features List**:
+  - Take unlimited full-length simulated BAR exams
+  - Explore complete question bank with AI explanations
+  - Generate personalized study plans based on performance
+
+### Action Buttons
+
+- **Go to Dashboard**: Return to your dashboard with premium access
+- **Take a Full-Length Exam**: Start using premium features immediately
+
+## Payment Configuration
+
+### Backend Setup
+
+The checkout process uses:
+
+- **Stripe API Version**: 2023-10-16
+- **Payment Methods**: Credit/debit cards
+- **Checkout Mode**: 
+  - Weekly plan: `subscription` mode (recurring)
+  - Full access: `payment` mode (one-time)
+
+### Environment Variables Required
+
+For the checkout to work, the following must be configured:
+
+- `STRIPE_SECRET_KEY`: Server-side Stripe API key
+- `STRIPE_WEEKLY_PRICE_ID`: Price ID for weekly subscription
+- `STRIPE_ONE_TIME_PRICE_ID`: Price ID for one-time payment
+- `NEXT_PUBLIC_BASE_URL`: Your application's base URL
+
+### Checkout Session Details
+
+When you click subscribe, the backend creates a Stripe session with:
+
+- **Line Items**: Selected plan pricing
+- **Quantity**: 1
+- **Success URL**: `/subscription/success?session_id={CHECKOUT_SESSION_ID}`
+- **Cancel URL**: `/subscription?canceled=true`
+- **Client Reference ID**: Your user ID for tracking
+- **Metadata**: User ID and plan ID for webhooks
+
+## Subscription Features Comparison
+
+<CardGroup cols={3}>
+  <Card title="Free" icon="hand">
+    - Limited practice questions
+    - 1 mock exam
+    - Basic tracking
+    - No AI features
+  </Card>
+  
+  <Card title="Weekly ($19.99/wk)" icon="calendar">
+    - Unlimited questions
+    - Unlimited exams
+    - Advanced analytics
+    - AI explanations
+    - Personalized plans
+  </Card>
+  
+  <Card title="Full Access ($199)" icon="infinity">
+    - Everything in Weekly
+    - Lifetime access
+    - One-time payment
+    - Future updates
+    - Priority support
+  </Card>
+</CardGroup>
+
+## Frequently Asked Questions
+
+<Accordion title="Can I upgrade from Weekly to Full Access?">
+  Yes! Contact support to upgrade. If you've been on the weekly plan, you may receive credit toward the full access price based on your payments.
+</Accordion>
+
+<Accordion title="How do I cancel my weekly subscription?">
+  Navigate to your account settings and click "Manage Subscription". This will redirect you to Stripe's customer portal where you can cancel or modify your subscription. Cancellations take effect at the end of the current billing period.
+</Accordion>
+
+<Accordion title="What happens if my payment fails?">
+  For weekly subscriptions:
+  - Stripe will automatically retry the payment
+  - You'll receive email notifications about failed payments
+  - After multiple failures, your subscription may be suspended
+  - You can update your payment method in the customer portal
+</Accordion>
+
+<Accordion title="Is there a refund policy?">
+  **7-Day Satisfaction Guarantee**: If you're not satisfied within the first 7 days of your subscription, contact support for a full refund. No questions asked.
+  
+  After 7 days:
+  - Weekly subscriptions: No refunds for current period, but you can cancel for future periods
+  - Full access: No refunds after 7 days due to immediate access to all content
+</Accordion>
+
+<Accordion title="What payment methods are accepted?">
+  Stripe supports:
+  - Visa, Mastercard, American Express, Discover
+  - Debit cards with card logos
+  - Digital wallets (availability varies by region)
+  
+  Payment methods vary by country. Stripe will show available options during checkout.
+</Accordion>
+
+<Accordion title="Is my payment information secure?">
+  Yes, absolutely:
+  - All payment data is processed by Stripe (a PCI-DSS Level 1 certified provider)
+  - Your credit card information never touches our servers
+  - All transactions use 256-bit SSL encryption
+  - Stripe is trusted by millions of businesses worldwide
+</Accordion>
+
+<Accordion title="Can I get a receipt for my subscription?">
+  Yes! After each payment:
+  - Stripe automatically emails you a receipt
+  - Access past receipts in the Stripe customer portal
+  - View payment history in your account settings
+</Accordion>
+
+<Accordion title="What happens when my weekly subscription renews?">
+  - Automatic charge occurs every 7 days from your start date
+  - Email receipt sent after each successful payment
+  - Your access continues uninterrupted
+  - You can cancel at any time before the next renewal
+</Accordion>
+
+<Accordion title="Do student discounts exist?">
+  Currently, the platform doesn't offer student discounts. However, the weekly plan at $19.99/week is designed to be accessible for students. Contact support if you have special circumstances.
+</Accordion>
+
+## Managing Your Subscription
+
+### Accessing Stripe Customer Portal
+
+From your account settings:
+
+1. Click "Manage Subscription"
+2. Redirected to secure Stripe portal
+3. View subscription status and payment history
+4. Update payment method
+5. Cancel or modify subscription
+6. Download receipts and invoices
+
+### Subscription Status
+
+Your dashboard displays:
+
+- **Current Plan**: Shows active subscription tier
+- **Renewal Date**: Next billing date (weekly plans only)
+- **Payment Method**: Last 4 digits of card (masked)
+- **Subscription Status**: Active, Canceled, Past Due, etc.
+
+## Best Value Analysis
+
+### When to Choose Weekly ($19.99/week)
+
+- Exam is less than 10 weeks away
+- Want to try premium features first
+- Prefer smaller, recurring payments
+- Planning to take exam soon and likely pass
+
+**Cost Examples**:
+- 4 weeks: $79.96
+- 8 weeks: $159.92
+- 12 weeks: $239.88
+
+### When to Choose Full Access ($199)
+
+- Exam is 10+ weeks away
+- Want lifetime access
+- Planning to retake if needed
+- Prefer single payment
+- Want to keep access after passing
+
+**Savings**: Breaks even at 10 weeks, saves money beyond that
+
+## Next Steps
+
+- Review your [Progress Dashboard](/guide/tracking-progress) to assess needs
+- Start with the Free plan to explore the platform
+- Upgrade when ready for intensive preparation
+- Complete [Onboarding](/guide/onboarding) to personalize your experience

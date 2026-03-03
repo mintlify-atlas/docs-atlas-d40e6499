@@ -1,0 +1,210 @@
+---
+title: 'Get User Profile'
+api: 'GET /api/user'
+description: 'Fetch complete user profile data from Firestore'
+---
+
+## Overview
+
+Retrieves all profile data for a user identified by their UUID. This endpoint returns the complete user document including onboarding data, progress tracking, performance insights, and exam information.
+
+## Query Parameters
+
+<ParamField query="uuid" type="string" required>
+  The unique identifier for the user. Leading/trailing whitespace is automatically trimmed.
+</ParamField>
+
+## Request
+
+```bash cURL
+curl -X GET "https://api.example.com/api/user?uuid=user123" \
+  -H "Content-Type: application/json"
+```
+
+## Response
+
+<ResponseField name="barExamTestDate" type="string">
+  The scheduled bar exam test date
+</ResponseField>
+
+<ResponseField name="targetScore" type="number">
+  Target score for the bar exam (260-400)
+</ResponseField>
+
+<ResponseField name="currentScore" type="number">
+  Current practice score (260-400)
+</ResponseField>
+
+<ResponseField name="weeklyHours" type="number">
+  Hours committed to study per week
+</ResponseField>
+
+<ResponseField name="onboarded" type="boolean">
+  Whether the user has completed onboarding
+</ResponseField>
+
+<ResponseField name="updatedAt" type="string">
+  ISO 8601 timestamp of last update
+</ResponseField>
+
+<ResponseField name="progress" type="object">
+  User's progress across different law sections
+  
+  <Expandable title="properties">
+    <ResponseField name="constitutionalLaw" type="number">
+      Progress percentage in Constitutional Law (0-100)
+    </ResponseField>
+    
+    <ResponseField name="contracts" type="number">
+      Progress percentage in Contracts (0-100)
+    </ResponseField>
+    
+    <ResponseField name="criminalLaw" type="number">
+      Progress percentage in Criminal Law (0-100)
+    </ResponseField>
+    
+    <ResponseField name="totalTimeSpent" type="number">
+      Total study time in minutes
+    </ResponseField>
+    
+    <ResponseField name="testAttempts" type="number">
+      Number of practice test attempts
+    </ResponseField>
+    
+    <ResponseField name="lastUpdated" type="string | null">
+      ISO 8601 timestamp of last progress update
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="performanceInsights" type="array">
+  Array of performance insight objects tracking user performance over time
+</ResponseField>
+
+<ResponseField name="StudyStreak" type="number">
+  Current study streak in days
+</ResponseField>
+
+<ResponseField name="PracticeQuestions" type="number">
+  Total number of practice questions completed
+</ResponseField>
+
+<ResponseField name="practiceHistory" type="array">
+  Historical record of practice sessions
+</ResponseField>
+
+<ResponseField name="bookmarkedQuestions" type="array">
+  Array of question IDs bookmarked by the user
+</ResponseField>
+
+<ResponseField name="simulatedExams" type="array">
+  Array of simulated exam attempts and results
+</ResponseField>
+
+<ResponseField name="essays" type="array">
+  Array of essay practice submissions
+</ResponseField>
+
+<ResponseField name="specificAreas" type="array">
+  Areas the user wants to focus on
+</ResponseField>
+
+<ResponseField name="challengingAreas" type="array">
+  Areas the user finds challenging
+</ResponseField>
+
+<ResponseField name="additionalInformation" type="string">
+  Additional notes provided during onboarding
+</ResponseField>
+
+<ResponseField name="barExamPreparationMaterial" type="string">
+  The preparation materials being used
+</ResponseField>
+
+<ResponseField name="payments" type="array">
+  Payment history for the user
+</ResponseField>
+
+<ResponseField name="questionDataKey" type="string">
+  Study plan key based on current score: "terrible", "bad", "decent", "good", or "amazing"
+</ResponseField>
+
+<ResponseField name="examResultFinal" type="object" optional>
+  Final exam result information
+  
+  <Expandable title="properties">
+    <ResponseField name="passed" type="boolean | null">
+      Whether the user passed the exam (null if prefer not to say)
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Response Example
+
+```json
+{
+  "barExamTestDate": "2026-07-28",
+  "targetScore": 350,
+  "currentScore": 290,
+  "weeklyHours": 20,
+  "onboarded": true,
+  "updatedAt": "2026-03-03T10:30:00.000Z",
+  "progress": {
+    "constitutionalLaw": 45,
+    "contracts": 38,
+    "criminalLaw": 52,
+    "totalTimeSpent": 1200,
+    "testAttempts": 5,
+    "lastUpdated": "2026-03-02T18:45:00.000Z"
+  },
+  "performanceInsights": [],
+  "StudyStreak": 7,
+  "PracticeQuestions": 234,
+  "practiceHistory": [],
+  "bookmarkedQuestions": [],
+  "simulatedExams": [],
+  "essays": [],
+  "specificAreas": ["Constitutional Law", "Criminal Procedure"],
+  "challengingAreas": ["Contracts", "Torts"],
+  "additionalInformation": "Looking to improve essay writing skills",
+  "barExamPreparationMaterial": "Barbri",
+  "payments": [],
+  "questionDataKey": "decent"
+}
+```
+
+## Error Responses
+
+<ResponseField name="error" type="string">
+  Error message describing what went wrong
+</ResponseField>
+
+### 400 Bad Request
+
+Returned when UUID is not provided.
+
+```json
+{
+  "error": "UUID is required"
+}
+```
+
+### 404 Not Found
+
+Returned when the user document does not exist.
+
+```json
+{
+  "error": "User data not found"
+}
+```
+
+### 500 Internal Server Error
+
+Returned when there's a server-side error fetching data.
+
+```json
+{
+  "error": "Failed to fetch data"
+}
+```

@@ -1,0 +1,210 @@
+---
+title: "Stripe Webhook Handler"
+api: "POST /api/webhook"
+description: "Handle Stripe webhook events for payment and subscription lifecycle management"
+---
+
+Processes Stripe webhook events to manage user subscriptions and payment lifecycles. This endpoint validates webhook signatures and updates user subscription data in Firestore based on payment events.
+
+## Headers
+
+<ParamField header="stripe-signature" type="string" required>
+  The Stripe webhook signature header used to verify the authenticity of the webhook event. Stripe automatically includes this header in all webhook requests.
+</ParamField>
+
+## Request Body
+
+The request body is the raw Stripe event payload. It must be passed as raw text (not parsed JSON) for signature verification.
+
+## Webhook Events
+
+This endpoint handles the following Stripe event types:
+
+### checkout.session.completed
+
+Triggered when a customer successfully completes a checkout session.
+
+**Processing Logic:**
+- Extracts `userId` from `client_reference_id`
+- Extracts `planId` from session metadata
+- For **weekly subscriptions**:
+  - Retrieves full subscription details from Stripe
+  - Updates user subscription with tier `"weekly"`, `endsAt` timestamp, `stripeCustomerId`, and `stripeSubscriptionId`
+- For **one-time payments**:
+  - Updates user subscription with tier `"one-time"` and `stripeCustomerId`
+  - No expiration date (lifetime access)
+
+### invoice.payment_succeeded
+
+Triggered when a subscription invoice payment succeeds (including renewals).
+
+**Processing Logic:**
+- Retrieves subscription details from Stripe
+- Queries Firestore to find the user associated with the `stripeSubscriptionId`
+- Updates the user's subscription `endsAt` date to the new `current_period_end`
+- Ensures subscription tier remains `"weekly"`
+
+### customer.subscription.deleted
+
+Triggered when a subscription is canceled or expires.
+
+**Processing Logic:**
+- Queries Firestore to find the user associated with the `stripeSubscriptionId`
+- Downgrades user to `"free"` tier
+- Removes `stripeSubscriptionId` from user record
+- User loses premium access
+
+## Response
+
+<ResponseField name="received" type="boolean">
+  Always returns `true` to acknowledge receipt of the webhook event.
+</ResponseField>
+
+## Error Responses
+
+<ResponseField name="error" type="string">
+  Error message describing the webhook validation failure.
+</ResponseField>
+
+### 400 Bad Request
+Returned when webhook signature verification fails.
+
+```json
+{
+  "error": "Webhook Error: No signatures found matching the expected signature for payload"
+}
+```
+
+## Subscription Update Schema
+
+The webhook updates user documents in Firestore with the following structure:
+
+```typescript
+{
+  subscription: {
+    tier: "weekly" | "one-time" | "free",
+    endsAt: Date | null,
+    stripeCustomerId: string | null,
+    stripeSubscriptionId: string | null,
+    updatedAt: serverTimestamp()
+  }
+}
+```
+
+<RequestExample>
+
+```bash cURL
+# Webhooks are sent by Stripe, but you can test with Stripe CLI
+stripe trigger checkout.session.completed
+
+# Or forward webhooks to your local environment
+stripe listen --forward-to localhost:3000/api/webhook
+```
+
+```javascript Testing Locally
+// Install Stripe CLI: https://stripe.com/docs/stripe-cli
+// Run this command to forward webhooks to your local server
+
+// Terminal 1: Start your Next.js server
+npm run dev
+
+// Terminal 2: Forward Stripe webhooks
+stripe listen --forward-to localhost:3000/api/webhook
+
+// Terminal 3: Trigger test events
+stripe trigger checkout.session.completed
+stripe trigger invoice.payment_succeeded
+stripe trigger customer.subscription.deleted
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json Success Response
+{
+  "received": true
+}
+```
+
+```json Error Response
+{
+  "error": "Webhook Error: No signatures found matching the expected signature for payload"
+}
+```
+
+</ResponseExample>
+
+## Security
+
+- **Signature Verification**: Every webhook is verified using `stripe.webhooks.constructEvent()` with the `STRIPE_WEBHOOK_SECRET`
+- **Raw Body Required**: The endpoint reads the raw request body (not JSON parsed) to properly verify signatures
+- **Environment Variable**: Requires `STRIPE_WEBHOOK_SECRET` from your Stripe Dashboard
+
+## Configuration
+
+### Environment Variables
+
+```bash
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+```
+
+### Stripe Dashboard Setup
+
+1. Go to **Developers > Webhooks** in your Stripe Dashboard
+2. Click **Add endpoint**
+3. Set endpoint URL to: `https://your-domain.com/api/webhook`
+4. Select events to listen for:
+   - `checkout.session.completed`
+   - `invoice.payment_succeeded`
+   - `customer.subscription.deleted`
+5. Copy the webhook signing secret to `STRIPE_WEBHOOK_SECRET`
+
+## Integration Notes
+
+- Uses Stripe API version `2023-10-16`
+- Integrates with Firebase Firestore for user data storage
+- Queries Firestore using `stripeSubscriptionId` to find associated users
+- Uses `serverTimestamp()` for accurate `updatedAt` tracking
+- Handles both subscription and one-time payment models
+- Automatically manages subscription renewal and expiration
+
+## Event Flow Examples
+
+### Weekly Subscription Purchase
+
+1. User completes checkout → `checkout.session.completed` webhook
+2. User record updated with `tier: "weekly"`, expiration date, and Stripe IDs
+3. Each billing cycle → `invoice.payment_succeeded` webhook
+4. Expiration date extended by subscription period
+5. User cancels → `customer.subscription.deleted` webhook
+6. User downgraded to `tier: "free"`
+
+### One-Time Payment Purchase
+
+1. User completes checkout → `checkout.session.completed` webhook
+2. User record updated with `tier: "one-time"` and customer ID
+3. No expiration date set (lifetime access)
+4. No recurring invoice events
+
+## Related Endpoints
+
+- [Create Checkout Session](/api/payment/checkout) - Initiates the payment flow
+
+## Troubleshooting
+
+**Webhook not receiving events:**
+- Verify webhook endpoint URL in Stripe Dashboard
+- Check that `STRIPE_WEBHOOK_SECRET` matches the dashboard value
+- Ensure endpoint is publicly accessible (not localhost)
+
+**Signature verification fails:**
+- Confirm raw body is being read (not JSON parsed)
+- Verify `stripe-signature` header is being forwarded correctly
+- Check for middleware that might modify the request body
+
+**User not found in database:**
+- Ensure `userId` is correctly set as `client_reference_id` during checkout
+- Verify Firestore collection name is `"users"`
+- Check that user document exists before payment

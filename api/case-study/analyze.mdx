@@ -1,0 +1,673 @@
+---
+title: 'Case Study Analysis'
+api: 'POST /api/case-study/*'
+description: 'Comprehensive case study analysis endpoints powered by OpenAI for legal education'
+---
+
+## Overview
+
+The case study API provides five specialized endpoints for analyzing different aspects of legal case work. All endpoints use OpenAI's GPT-3.5 Turbo model with JSON-formatted responses and strict timeout limits for optimal performance.
+
+## Endpoints
+
+1. **POST /api/case-study/analyze** - General case analysis with IRAC feedback
+2. **POST /api/case-study/analyze-brief** - Case brief analysis and evaluation
+3. **POST /api/case-study/case-research** - Legal research feedback and source evaluation
+4. **POST /api/case-study/legal-writing** - Legal document writing assessment
+5. **POST /api/case-study/moot-court** - Moot court performance evaluation
+6. **POST /api/case-study/legal-ethics** - Legal ethics scenario analysis
+
+---
+
+## 1. General Case Analysis
+
+**Endpoint**: `POST /api/case-study/analyze`
+
+Analyzes user's case analysis using the IRAC (Issue, Rule, Application, Conclusion) framework.
+
+### Request Parameters
+
+<ParamField body="caseData" type="object" required>
+  Object containing case information:
+  - `title`: Case title
+  - `facts`: Case facts (max 300 chars used)
+  - `question`: Legal question (max 150 chars used)
+</ParamField>
+
+<ParamField body="userAnalysis" type="string" required>
+  User's written analysis of the case (max 500 chars used)
+</ParamField>
+
+### Response Fields
+
+<ResponseField name="score" type="number">
+  Overall score between 0 and 1
+</ResponseField>
+
+<ResponseField name="feedback" type="string">
+  Brief paragraph of general feedback
+</ResponseField>
+
+<ResponseField name="suggestions" type="array">
+  Array of short, actionable suggestions
+</ResponseField>
+
+<ResponseField name="analysis" type="object">
+  IRAC breakdown with fields:
+  - `facts`: 1-2 sentence summary
+  - `issue`: 1 sentence issue statement
+  - `rule`: 1 sentence rule statement
+  - `application`: 2 sentence application
+  - `conclusion`: 1 sentence conclusion
+</ResponseField>
+
+### Configuration
+
+- **Model**: gpt-3.5-turbo (faster than GPT-4)
+- **Max Tokens**: 400 (reduced for speed)
+- **Temperature**: 0.7
+- **Response Format**: JSON object
+- **Max Duration**: 10 seconds (Vercel timeout limit)
+
+Source: `/workspace/source/src/app/api/case-study/analyze/route.ts:8,42-54`
+
+### Example Request
+
+```bash
+curl -X POST 'https://api.lsattraining.com/api/case-study/analyze' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "caseData": {
+      "title": "Smith v. Jones",
+      "facts": "A contract dispute where the defendant failed to deliver goods as specified in a written agreement...",
+      "question": "Did the defendant breach the contract?"
+    },
+    "userAnalysis": "The defendant breached the contract by failing to deliver. Under UCC Article 2, a seller must deliver goods conforming to the contract. Here, the goods were not delivered, constituting a material breach."
+  }'
+```
+
+### Example Response
+
+```json
+{
+  "score": 0.85,
+  "feedback": "Strong analysis with clear identification of the breach and applicable law. Consider discussing potential remedies and damages.",
+  "suggestions": [
+    "Add analysis of perfect tender rule",
+    "Discuss buyer's remedies under UCC 2-711"
+  ],
+  "analysis": {
+    "facts": "Seller failed to deliver contracted goods. Written agreement exists.",
+    "issue": "Whether failure to deliver constitutes material breach.",
+    "rule": "UCC Article 2 requires conforming delivery.",
+    "application": "Defendant's non-delivery violates the perfect tender rule. No substantial performance occurred.",
+    "conclusion": "Defendant materially breached the contract."
+  }
+}
+```
+
+---
+
+## 2. Case Brief Analysis
+
+**Endpoint**: `POST /api/case-study/analyze-brief`
+
+Evaluates the quality of a user's case brief using custom analysis algorithms.
+
+### Request Parameters
+
+<ParamField body="userBrief" type="object" required>
+  Object containing the user's case brief with fields:
+  - `issue`: Issue statement
+  - `rule`: Rule statement
+  - `analysis`: Legal analysis
+  - `conclusion`: Conclusion
+</ParamField>
+
+<ParamField body="caseData" type="object" required>
+  Object containing correct case information:
+  - `issue`: Correct issue
+  - `holding`: Correct holding/rule
+  - `reasoning`: Correct reasoning
+</ParamField>
+
+### Response Fields
+
+<ResponseField name="feedback" type="string">
+  Comprehensive feedback on the brief's quality with specific suggestions for improvement
+</ResponseField>
+
+### Analysis Components
+
+The endpoint evaluates four key areas:
+
+1. **Issue Spotting**: Compares user's issue identification with correct issue
+2. **Rule Statement**: Evaluates accuracy of legal rule statement
+3. **Legal Analysis**: Assesses depth and quality of reasoning
+4. **Conclusion**: Validates conclusion against correct holding
+
+Source: `/workspace/source/src/lib/ai.ts:96-183`
+
+### Scoring Criteria
+
+- **0.9+**: "Excellent work! Your case brief demonstrates strong legal analysis."
+- **0.7-0.89**: "Good analysis with some areas for improvement."
+- **Below 0.7**: "Consider revising your brief to strengthen these areas."
+
+Source: `/workspace/source/src/lib/ai.ts:173-183`
+
+### Example Request
+
+```bash
+curl -X POST 'https://api.lsattraining.com/api/case-study/analyze-brief' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "userBrief": {
+      "issue": "Whether silence constitutes acceptance",
+      "rule": "Silence generally does not constitute acceptance",
+      "analysis": "The offeree did not respond, which under common law does not create a contract",
+      "conclusion": "No contract was formed"
+    },
+    "caseData": {
+      "issue": "Whether silence can constitute acceptance when there is a prior course of dealing",
+      "holding": "Silence may constitute acceptance when parties have established a pattern of conduct",
+      "reasoning": "Prior dealings created a reasonable expectation that silence meant acceptance"
+    }
+  }'
+```
+
+### Example Response
+
+```json
+{
+  "feedback": "Good analysis with some areas for improvement. Good issue spotting, but consider additional legal questions. Clear and accurate statement of the legal rules. Good analysis, but could develop arguments further. Reasonable conclusion, but could be better supported."
+}
+```
+
+---
+
+## 3. Legal Research Evaluation
+
+**Endpoint**: `POST /api/case-study/case-research`
+
+Evaluates the quality of legal research and sources provided by the user.
+
+### Request Parameters
+
+<ParamField body="researchQuery" type="string" required>
+  The legal research query or question (max 200 chars used)
+</ParamField>
+
+<ParamField body="userSources" type="string" required>
+  List of sources provided by the user (max 500 chars used)
+</ParamField>
+
+### Response Fields
+
+<ResponseField name="score" type="number">
+  Research quality score between 0 and 1
+</ResponseField>
+
+<ResponseField name="feedback" type="string">
+  Brief paragraph on research quality
+</ResponseField>
+
+<ResponseField name="sourcesAnalysis" type="string">
+  Analysis of the sources provided
+</ResponseField>
+
+<ResponseField name="missingPrecedents" type="array">
+  Array of cases or statutes that should have been included
+</ResponseField>
+
+<ResponseField name="suggestedResearch" type="string">
+  Suggestions for further research directions
+</ResponseField>
+
+<ResponseField name="modelSources" type="array">
+  Array of relevant cases and statutes recommended by the AI
+</ResponseField>
+
+### Configuration
+
+- **Model**: gpt-3.5-turbo
+- **Max Tokens**: 400
+- **Temperature**: 0.7
+- **System Role**: Legal research expert
+
+Source: `/workspace/source/src/app/api/case-study/case-research/route.ts:31-43`
+
+### Example Request
+
+```bash
+curl -X POST 'https://api.lsattraining.com/api/case-study/case-research' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "researchQuery": "Liability for negligent misrepresentation in real estate transactions",
+    "userSources": "Restatement (Second) of Torts § 552, Williams v. Polgar, local state statutes on disclosure requirements"
+  }'
+```
+
+### Example Response
+
+```json
+{
+  "score": 0.88,
+  "feedback": "Strong research foundation with relevant Restatement section and case law. Good inclusion of state-specific disclosure requirements.",
+  "sourcesAnalysis": "Restatement § 552 is the primary authority. Williams v. Polgar provides relevant precedent. State disclosure statutes add jurisdiction-specific context.",
+  "missingPrecedents": [
+    "Markov v. ABC Transfer & Storage Co.",
+    "UCC § 2-313 for warranty considerations"
+  ],
+  "suggestedResearch": "Explore buyer's duty to investigate and comparative negligence defenses. Research recent state supreme court decisions on seller disclosure obligations.",
+  "modelSources": [
+    "Restatement (Second) of Torts § 552",
+    "Williams v. Polgar",
+    "Markov v. ABC Transfer & Storage Co.",
+    "State Real Estate Disclosure Act"
+  ]
+}
+```
+
+---
+
+## 4. Legal Writing Assessment
+
+**Endpoint**: `POST /api/case-study/legal-writing`
+
+Provides comprehensive feedback on legal writing quality across multiple dimensions.
+
+### Request Parameters
+
+<ParamField body="documentType" type="string" required>
+  Type of legal document (e.g., "Memo", "Brief", "Opinion", "Motion")
+</ParamField>
+
+<ParamField body="userWriting" type="string" required>
+  The user's legal writing sample (max 800 chars used)
+</ParamField>
+
+<ParamField body="assignment" type="string" required>
+  Description of the writing assignment (max 200 chars used)
+</ParamField>
+
+### Response Fields
+
+<ResponseField name="clarity" type="number">
+  Clarity score between 0 and 1
+</ResponseField>
+
+<ResponseField name="organization" type="number">
+  Organization score between 0 and 1
+</ResponseField>
+
+<ResponseField name="legalAnalysis" type="number">
+  Legal analysis quality score between 0 and 1
+</ResponseField>
+
+<ResponseField name="citation" type="number">
+  Citation accuracy and format score between 0 and 1
+</ResponseField>
+
+<ResponseField name="grammar" type="number">
+  Grammar and mechanics score between 0 and 1
+</ResponseField>
+
+<ResponseField name="overallFeedback" type="string">
+  Brief paragraph on overall writing quality
+</ResponseField>
+
+<ResponseField name="strengthPoints" type="array">
+  Array of strong points in the writing
+</ResponseField>
+
+<ResponseField name="improvementAreas" type="array">
+  Array of areas needing improvement
+</ResponseField>
+
+<ResponseField name="suggestedRevisions" type="array">
+  Array of specific revision suggestions
+</ResponseField>
+
+<ResponseField name="modelExample" type="string">
+  Brief example of improved writing for a section
+</ResponseField>
+
+### Configuration
+
+- **Model**: gpt-3.5-turbo
+- **Max Tokens**: 500
+- **Temperature**: 0.7
+- **System Role**: Legal writing professor
+
+Source: `/workspace/source/src/app/api/case-study/legal-writing/route.ts:39-51`
+
+### Example Request
+
+```bash
+curl -X POST 'https://api.lsattraining.com/api/case-study/legal-writing' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "documentType": "Memo",
+    "assignment": "Memorandum analyzing whether client has valid negligence claim",
+    "userWriting": "MEMORANDUM\nTO: Senior Partner\nFROM: Associate\nRE: Smith Negligence Claim\n\nThe client may have a valid negligence claim. The defendant owed a duty of care as a property owner. The defendant breached this duty by failing to maintain the premises. The client suffered injuries as a direct result. Damages include medical expenses and lost wages."
+  }'
+```
+
+### Example Response
+
+```json
+{
+  "clarity": 0.85,
+  "organization": 0.80,
+  "legalAnalysis": 0.75,
+  "citation": 0.70,
+  "grammar": 0.90,
+  "overallFeedback": "Clear and well-organized memo structure. Legal analysis covers the basic elements but needs more depth. Add case citations and expand on causation analysis.",
+  "strengthPoints": [
+    "Professional memo format",
+    "Clear identification of negligence elements",
+    "Concise writing style"
+  ],
+  "improvementAreas": [
+    "Lacks case law citations",
+    "Causation analysis is conclusory",
+    "No discussion of potential defenses"
+  ],
+  "suggestedRevisions": [
+    "Add citations to support each element of negligence",
+    "Develop the breach analysis with specific facts",
+    "Include a discussion of assumption of risk or contributory negligence",
+    "Expand damages section with more specific calculations"
+  ],
+  "modelExample": "The defendant breached the duty of care owed to invitees by failing to repair a known defect in the stairway. See Restatement (Second) of Torts § 343. The defendant had actual notice of the loose handrail for three weeks prior to the incident, as evidenced by the maintenance logs."
+}
+```
+
+---
+
+## 5. Moot Court Evaluation
+
+**Endpoint**: `POST /api/case-study/moot-court`
+
+Evaluates oral advocacy performance in moot court arguments.
+
+### Request Parameters
+
+<ParamField body="caseScenario" type="string" required>
+  Description of the moot court case scenario (max 200 chars used)
+</ParamField>
+
+<ParamField body="userArgument" type="string" required>
+  User's oral argument transcript or outline (max 500 chars used)
+</ParamField>
+
+<ParamField body="side" type="string" required>
+  Which side the user is arguing (e.g., "Plaintiff", "Defendant", "Appellant", "Respondent")
+</ParamField>
+
+### Response Fields
+
+<ResponseField name="persuasiveness" type="number">
+  Persuasiveness score between 0 and 1
+</ResponseField>
+
+<ResponseField name="legalReasoning" type="number">
+  Legal reasoning quality score between 0 and 1
+</ResponseField>
+
+<ResponseField name="caseUsage" type="number">
+  Effectiveness of case citations and precedent usage between 0 and 1
+</ResponseField>
+
+<ResponseField name="delivery" type="number">
+  Oral delivery and presentation score between 0 and 1
+</ResponseField>
+
+<ResponseField name="overallFeedback" type="string">
+  Brief paragraph on overall moot court performance
+</ResponseField>
+
+<ResponseField name="strengthPoints" type="array">
+  Array of strong points in the argument
+</ResponseField>
+
+<ResponseField name="improvementAreas" type="array">
+  Array of areas needing improvement
+</ResponseField>
+
+<ResponseField name="counterArguments" type="array">
+  Array of potential counterarguments to prepare for
+</ResponseField>
+
+<ResponseField name="benchQuestions" type="array">
+  Array of questions a judge might ask
+</ResponseField>
+
+### Configuration
+
+- **Model**: gpt-3.5-turbo
+- **Max Tokens**: 400
+- **Temperature**: 0.7
+- **System Role**: Law professor evaluating moot court
+
+Source: `/workspace/source/src/app/api/case-study/moot-court/route.ts:38-50`
+
+### Example Request
+
+```bash
+curl -X POST 'https://api.lsattraining.com/api/case-study/moot-court' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "caseScenario": "First Amendment challenge to university speech code",
+    "side": "Appellant",
+    "userArgument": "May it please the Court. The university speech code is unconstitutional viewpoint discrimination. Under R.A.V. v. City of St. Paul, the government cannot regulate speech based on its message. The code selectively prohibits certain offensive speech while allowing other offensive speech, violating the First Amendment. We ask the Court to strike down the policy."
+  }'
+```
+
+### Example Response
+
+```json
+{
+  "persuasiveness": 0.82,
+  "legalReasoning": 0.85,
+  "caseUsage": 0.80,
+  "delivery": 0.78,
+  "overallFeedback": "Strong opening with appropriate citation to R.A.V. Legal reasoning is sound regarding viewpoint discrimination. Consider addressing the university's interest in maintaining educational environment.",
+  "strengthPoints": [
+    "Proper courtroom etiquette with 'May it please the Court'",
+    "Effective use of R.A.V. precedent",
+    "Clear identification of constitutional issue"
+  ],
+  "improvementAreas": [
+    "Address potential limited public forum argument",
+    "Discuss Tinker standard for student speech",
+    "Prepare response to compelling interest arguments"
+  ],
+  "counterArguments": [
+    "University has compelling interest in preventing harassment",
+    "Speech code is narrowly tailored content-neutral regulation",
+    "Educational setting allows for greater speech restrictions"
+  ],
+  "benchQuestions": [
+    "How do you distinguish this from Tinker v. Des Moines?",
+    "What is your standard for reviewing university speech codes?",
+    "Doesn't the university have a compelling interest in maintaining an educational environment?"
+  ]
+}
+```
+
+---
+
+## 6. Legal Ethics Analysis
+
+**Endpoint**: `POST /api/case-study/legal-ethics`
+
+Analyzes responses to legal ethics scenarios based on professional conduct rules.
+
+### Request Parameters
+
+<ParamField body="scenario" type="string" required>
+  Description of the ethical scenario (max 300 chars used)
+</ParamField>
+
+<ParamField body="userResponse" type="string" required>
+  User's response to the ethical dilemma (max 500 chars used)
+</ParamField>
+
+<ParamField body="jurisdiction" type="string" optional>
+  Jurisdiction for ethical rules (defaults to "Model Rules of Professional Conduct")
+</ParamField>
+
+### Response Fields
+
+<ResponseField name="ethicalAnalysis" type="number">
+  Overall ethical reasoning score between 0 and 1
+</ResponseField>
+
+<ResponseField name="ruleIdentification" type="number">
+  Accuracy of identifying relevant ethics rules between 0 and 1
+</ResponseField>
+
+<ResponseField name="conflictResolution" type="number">
+  Quality of conflict resolution approach between 0 and 1
+</ResponseField>
+
+<ResponseField name="professionalJudgment" type="number">
+  Quality of professional judgment between 0 and 1
+</ResponseField>
+
+<ResponseField name="overallFeedback" type="string">
+  Brief paragraph on ethical reasoning quality
+</ResponseField>
+
+<ResponseField name="relevantRules" type="array">
+  Array of relevant Model Rules (e.g., "Model Rule 1.6", "Model Rule 1.7")
+</ResponseField>
+
+<ResponseField name="ethicalConsiderations" type="array">
+  Array of key ethical considerations to analyze
+</ResponseField>
+
+<ResponseField name="alternativeApproaches" type="array">
+  Array of alternative approaches to the ethical issue
+</ResponseField>
+
+<ResponseField name="potentialConsequences" type="array">
+  Array of potential consequences of different actions
+</ResponseField>
+
+<ResponseField name="modelResponse" type="string">
+  Brief example of a well-reasoned ethical response
+</ResponseField>
+
+### Configuration
+
+- **Model**: gpt-3.5-turbo
+- **Max Tokens**: 500
+- **Temperature**: 0.7
+- **System Role**: Legal ethics professor
+
+Source: `/workspace/source/src/app/api/case-study/legal-ethics/route.ts:36-48`
+
+### Example Request
+
+```bash
+curl -X POST 'https://api.lsattraining.com/api/case-study/legal-ethics' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "scenario": "A client confides that they plan to commit perjury in an upcoming trial. What should the attorney do?",
+    "userResponse": "The attorney should withdraw from representation if the client insists on committing perjury. Under Model Rule 3.3, a lawyer has a duty of candor to the tribunal and cannot knowingly offer false evidence. The attorney should first counsel the client against perjury, but if the client persists, must take remedial measures including withdrawal.",
+    "jurisdiction": "Model Rules of Professional Conduct"
+  }'
+```
+
+### Example Response
+
+```json
+{
+  "ethicalAnalysis": 0.90,
+  "ruleIdentification": 0.95,
+  "conflictResolution": 0.85,
+  "professionalJudgment": 0.88,
+  "overallFeedback": "Excellent identification of the ethical issue and proper citation to Model Rule 3.3. Your response demonstrates strong understanding of the duty of candor to the tribunal and appropriate remedial measures.",
+  "relevantRules": [
+    "Model Rule 3.3 (Candor Toward the Tribunal)",
+    "Model Rule 1.6 (Confidentiality)",
+    "Model Rule 1.16 (Declining or Terminating Representation)"
+  ],
+  "ethicalConsiderations": [
+    "Duty of candor to tribunal vs. duty of confidentiality to client",
+    "Client autonomy and right to testify",
+    "Attorney's role as officer of the court",
+    "Timing of withdrawal to avoid prejudice"
+  ],
+  "alternativeApproaches": [
+    "Remonstrate with client about consequences of perjury",
+    "Allow narrative testimony without direct examination",
+    "Seek to withdraw before testimony occurs",
+    "Disclose to tribunal if withdrawal denied (jurisdiction-dependent)"
+  ],
+  "potentialConsequences": [
+    "Withdrawal may alert court to issue",
+    "Client could face perjury charges",
+    "Attorney could face disciplinary action for complicity",
+    "Late withdrawal could prejudice client's case"
+  ],
+  "modelResponse": "Under Model Rule 3.3(a)(3), I cannot knowingly offer false testimony. I would first counsel the client about the serious consequences of perjury and my ethical obligations. If the client persists, I must take remedial measures. I would seek to withdraw under Rule 1.16(a)(1), as continuing would require me to violate the Rules of Professional Conduct. If the court denies withdrawal, I may need to consider the narrative approach, though jurisdictions vary on this issue."
+}
+```
+
+---
+
+## Common Error Responses
+
+All endpoints share similar error handling:
+
+### 400 Bad Request
+
+```json
+{
+  "error": "[Specific missing parameter] required"
+}
+```
+
+### 500 Internal Server Error
+
+On AI analysis failure, endpoints return a 200 status with default/fallback data:
+
+```json
+{
+  "error": "[Analysis type] failed",
+  "score": 0,
+  "feedback": "Please try again...",
+  // ... other default fields
+}
+```
+
+## Performance Optimization
+
+All case study endpoints implement:
+
+- **Input Truncation**: Limits input length to reduce token usage and improve response time
+- **Model Selection**: Uses GPT-3.5 Turbo instead of GPT-4 for faster responses
+- **Token Limits**: Reduced max_tokens (400-500) for concise feedback
+- **Timeout Protection**: 10-second max duration for Vercel deployment
+- **JSON Response Format**: Structured responses for reliable parsing
+
+## Best Practices
+
+- Keep submissions concise for faster analysis
+- Provide complete context in case scenarios
+- Review all feedback dimensions, not just scores
+- Use suggestions to guide improvement
+- Combine multiple endpoints for comprehensive case analysis
+
+Sources:
+- `/workspace/source/src/app/api/case-study/analyze/route.ts`
+- `/workspace/source/src/app/api/case-study/analyze-brief/route.ts`
+- `/workspace/source/src/app/api/case-study/case-research/route.ts`
+- `/workspace/source/src/app/api/case-study/legal-writing/route.ts`
+- `/workspace/source/src/app/api/case-study/moot-court/route.ts`
+- `/workspace/source/src/app/api/case-study/legal-ethics/route.ts`
+- `/workspace/source/src/lib/ai.ts`

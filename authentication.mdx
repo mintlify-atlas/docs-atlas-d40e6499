@@ -1,0 +1,571 @@
+---
+title: Authentication
+description: Learn how authentication works in Prep for Law using Firebase and NextAuth
+---
+
+## Overview
+
+Prep for Law uses **Firebase Authentication** integrated with **NextAuth** to provide secure, flexible authentication. Users can sign in with email/password credentials or use Google OAuth for a seamless experience.
+
+<Note>
+  All authentication is handled server-side with secure token management and session handling via JWT (JSON Web Tokens).
+</Note>
+
+## Authentication providers
+
+The platform supports two authentication methods:
+
+<CardGroup cols={2}>
+  <Card title="Email & Password" icon="envelope">
+    Traditional credentials-based authentication using Firebase Auth
+  </Card>
+  <Card title="Google OAuth" icon="google">
+    One-click sign-in using your Google account via OAuth 2.0
+  </Card>
+</CardGroup>
+
+## Firebase configuration
+
+Firebase is initialized with environment variables for security:
+
+```javascript
+// src/lib/firebase.js
+import { initializeApp, getApps, getApp } from "firebase/app";
+import { getAuth } from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
+import { getStorage } from "firebase/storage";
+
+const firebaseConfig = {
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
+};
+
+// Prevent multiple initializations in Next.js
+const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+
+export const auth = getAuth(app);
+export const db = getFirestore(app);
+export const storage = getStorage(app);
+```
+
+<Tip>
+  The `getApps().length` check prevents Firebase from being initialized multiple times during Next.js hot reloading in development.
+</Tip>
+
+### Environment variables
+
+Add these variables to your `.env.local` file:
+
+```bash
+NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
+NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=your_measurement_id
+```
+
+## NextAuth configuration
+
+NextAuth handles session management and integrates with Firebase:
+
+```typescript
+// src/app/api/auth/[...nextauth].ts
+import NextAuth from "next-auth";
+import GoogleProvider from "next-auth/providers/google";
+import CredentialsProvider from "next-auth/providers/credentials";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth, db } from "@/lib/firebase";
+import { doc, setDoc, getDoc } from "firebase/firestore";
+
+export default NextAuth({
+  providers: [
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+    }),
+    CredentialsProvider({
+      name: "Credentials",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) {
+          throw new Error("Email and password are required");
+        }
+
+        const userCredential = await signInWithEmailAndPassword(
+          auth,
+          credentials.email,
+          credentials.password
+        );
+        const user = userCredential.user;
+
+        // Save user data to Firestore
+        const userRef = doc(db, "users", user.uid);
+        await setDoc(userRef, {
+          id: user.uid,
+          email: user.email,
+          name: user.displayName || "User",
+        });
+
+        return {
+          id: user.uid,
+          email: user.email,
+          name: user.displayName || "User",
+        };
+      },
+    }),
+  ],
+  callbacks: {
+    async session({ session, token }) {
+      if (token.sub) {
+        // Fetch user data from Firestore
+        const userRef = doc(db, "users", token.sub);
+        const userDoc = await getDoc(userRef);
+        if (userDoc.exists()) {
+          session.user = userDoc.data();
+        }
+      }
+      return session;
+    },
+    async jwt({ token, user }) {
+      if (user) {
+        token.sub = user.id; // Store user ID in token
+      }
+      return token;
+    },
+  },
+  session: { strategy: "jwt" },
+  secret: process.env.NEXTAUTH_SECRET,
+});
+```
+
+<Accordion title="NextAuth environment variables">
+  Add these to your `.env.local`:
+
+  ```bash
+  GOOGLE_CLIENT_ID=your_google_client_id
+  GOOGLE_CLIENT_SECRET=your_google_client_secret
+  NEXTAUTH_SECRET=your_nextauth_secret
+  NEXTAUTH_URL=http://localhost:3000
+  ```
+
+  <Warning>
+    Generate a secure `NEXTAUTH_SECRET` using: `openssl rand -base64 32`
+  </Warning>
+</Accordion>
+
+## Email/password authentication
+
+The credentials provider uses Firebase's `signInWithEmailAndPassword`:
+
+```typescript
+// src/app/auth/page.tsx (simplified)
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "@/lib/firebase";
+
+const handleSignIn = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setError("");
+  setIsLoading(true);
+
+  try {
+    await signInWithEmailAndPassword(auth, loginEmail, loginPassword);
+    setSuccess("Login successful! Redirecting...");
+    setTimeout(() => router.push("/dashboard"), 1000);
+  } catch (error: any) {
+    let errorMessage = "Failed to sign in";
+    if (error.code === "auth/user-not-found" || error.code === "auth/wrong-password")
+      errorMessage = "Invalid email or password";
+    else if (error.code === "auth/too-many-requests")
+      errorMessage = "Too many failed attempts. Try again later";
+    else if (error.code === "auth/invalid-email")
+      errorMessage = "Invalid email format";
+    setError(errorMessage);
+  } finally {
+    setIsLoading(false);
+  }
+};
+```
+
+### Error handling
+
+The platform handles common Firebase authentication errors:
+
+| Error Code | User Message |
+|------------|-------------|
+| `auth/user-not-found` | Invalid email or password |
+| `auth/wrong-password` | Invalid email or password |
+| `auth/too-many-requests` | Too many failed attempts. Try again later |
+| `auth/invalid-email` | Invalid email format |
+
+<Tip>
+  For security, we display the same message for both `user-not-found` and `wrong-password` errors to prevent user enumeration attacks.
+</Tip>
+
+## Google authentication
+
+Google Sign-In is implemented with Firebase's `signInWithPopup`:
+
+```typescript
+// components/GoogleSignin.tsx
+import { signInWithPopup, GoogleAuthProvider } from "firebase/auth";
+import { auth, db } from "@/lib/firebase";
+import { doc, setDoc, getDoc } from "firebase/firestore";
+
+const handleGoogleSignIn = async () => {
+  setIsLoading(true);
+  setError("");
+
+  try {
+    const provider = new GoogleAuthProvider();
+    const userCredential = await signInWithPopup(auth, provider);
+    const user = userCredential.user;
+
+    if (!user) throw new Error("No user data received");
+
+    const userRef = doc(db, "users", user.uid);
+    const userSnap = await getDoc(userRef);
+
+    if (!userSnap.exists()) {
+      // Create new user profile
+      const userData = {
+        userId: user.uid,
+        email: user.email || "",
+        name: user.displayName || "Anonymous",
+        authProvider: "google",
+        subscription: "free",
+        barExamTestDate: null,
+        targetScore: null,
+        StudyStreak: 0,
+        PracticeQuestions: 0,
+        currentScore: null,
+        createdAt: new Date().toISOString(),
+        onboarded: false,
+        progress: {
+          constitutionalLaw: 0,
+          contracts: 0,
+          criminalLaw: 0,
+          totalTimeSpent: 0,
+          testAttempts: 0,
+        },
+      };
+
+      await setDoc(userRef, userData);
+      router.push("/onboarding"); // New users → onboarding
+    } else {
+      // Existing user
+      const userData = userSnap.data();
+      if (userData.onboarded) {
+        router.push("/dashboard"); // Onboarded → dashboard
+      } else {
+        router.push("/onboarding"); // Not onboarded → onboarding
+      }
+    }
+  } catch (error) {
+    console.error("Google sign-in error:", error);
+    setError("Could not sign in with Google. Please try again.");
+  } finally {
+    setIsLoading(false);
+  }
+};
+```
+
+### New user flow
+
+When a user signs in with Google for the first time:
+
+<Steps>
+  <Step title="Authentication">
+    User clicks "Continue with Google" and completes OAuth flow
+  </Step>
+  <Step title="Profile creation">
+    Platform checks if user exists in Firestore. If not, creates new user document with default values
+  </Step>
+  <Step title="Onboarding redirect">
+    New users are automatically redirected to `/onboarding` to complete their profile
+  </Step>
+  <Step title="Dashboard access">
+    After onboarding, the `onboarded` flag is set to `true`, and users access `/dashboard` on subsequent logins
+  </Step>
+</Steps>
+
+## Session management
+
+Sessions are managed using JWT tokens with the following flow:
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant NextAuth
+    participant Firebase
+    participant Firestore
+    
+    Client->>NextAuth: Sign in request
+    NextAuth->>Firebase: Authenticate credentials
+    Firebase-->>NextAuth: User credentials
+    NextAuth->>Firestore: Store/fetch user data
+    Firestore-->>NextAuth: User profile
+    NextAuth-->>Client: JWT token + session
+    Client->>NextAuth: Subsequent requests with JWT
+    NextAuth->>Firestore: Fetch fresh user data
+    Firestore-->>NextAuth: Updated profile
+    NextAuth-->>Client: Session data
+```
+
+### Session callbacks
+
+NextAuth callbacks enrich the session with Firestore data:
+
+```typescript
+callbacks: {
+  async session({ session, token }) {
+    if (token.sub) {
+      // Fetch latest user data from Firestore
+      const userRef = doc(db, "users", token.sub);
+      const userDoc = await getDoc(userRef);
+      if (userDoc.exists()) {
+        session.user = userDoc.data(); // Fresh data on each request
+      }
+    }
+    return session;
+  },
+  async jwt({ token, user }) {
+    if (user) {
+      token.sub = user.id; // User ID persists in JWT
+    }
+    return token;
+  },
+}
+```
+
+<Note>
+  The session callback fetches fresh user data from Firestore on each request, ensuring the session always reflects the latest user profile.
+</Note>
+
+## Protected routes
+
+Routes requiring authentication use the `ProtectedRoute` component:
+
+```typescript
+// components/ProtectRoute.tsx (conceptual)
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { onAuthStateChanged } from "firebase/auth";
+import { auth } from "@/lib/firebase";
+
+export default function ProtectedRoute({ children }) {
+  const router = useRouter();
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        router.push("/auth"); // Redirect to login if not authenticated
+      }
+    });
+
+    return () => unsubscribe();
+  }, [router]);
+
+  return <>{children}</>;
+}
+```
+
+### Usage in pages
+
+```typescript
+// src/app/dashboard/page.tsx
+import ProtectedRoute from "@/components/ProtectRoute";
+
+export default function DashboardPage() {
+  return (
+    <ProtectedRoute>
+      {/* Dashboard content only visible to authenticated users */}
+    </ProtectedRoute>
+  );
+}
+```
+
+## Firebase Admin SDK
+
+Server-side operations use the Firebase Admin SDK:
+
+```typescript
+// src/lib/firebaseAdmin.ts
+import { initializeApp, cert, getApps } from "firebase-admin/app";
+import { getFirestore } from "firebase-admin/firestore";
+
+if (!getApps().length) {
+  initializeApp({
+    credential: cert({
+      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
+    }),
+  });
+}
+
+const db = getFirestore();
+export { db };
+```
+
+<Accordion title="Admin SDK environment variables">
+  ```bash
+  FIREBASE_CLIENT_EMAIL=firebase-adminsdk@your-project.iam.gserviceaccount.com
+  FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+  ```
+
+  <Warning>
+    The private key must have literal `\n` characters. The `.replace(/\\n/g, "\n")` converts them to actual newlines.
+  </Warning>
+</Accordion>
+
+## User data structure
+
+Authenticated users have the following Firestore document structure:
+
+```typescript
+interface UserData {
+  userId: string;
+  email: string;
+  name: string;
+  authProvider: "google" | "credentials";
+  subscription: "free" | "premium" | "enterprise";
+  barExamTestDate: string | null;
+  targetScore: string | null;
+  currentScore: string | null;
+  StudyStreak: number;
+  PracticeQuestions: number;
+  onboarded: boolean;
+  createdAt: string;
+  updatedAt: string | null;
+  progress: {
+    constitutionalLaw: number;
+    contracts: number;
+    criminalLaw: number;
+    totalTimeSpent: number;
+    testAttempts: number;
+    lastUpdated: string | null;
+  };
+  practiceHistory: PracticeSession[];
+  bookmarkedQuestions: string[];
+  performanceInsights: PerformanceInsight[];
+}
+```
+
+## Security best practices
+
+<AccordionGroup>
+  <Accordion title="Token validation">
+    All API routes validate Firebase ID tokens:
+
+    ```typescript
+    // In API routes
+    const idToken = await getIdToken(user);
+    
+    const response = await fetch("/api/endpoint", {
+      headers: {
+        Authorization: `Bearer ${idToken}`,
+      },
+    });
+    ```
+  </Accordion>
+
+  <Accordion title="Environment variables">
+    Never commit `.env.local` to version control. Use `.gitignore`:
+
+    ```bash
+    # .gitignore
+    .env.local
+    .env.*.local
+    ```
+  </Accordion>
+
+  <Accordion title="Firestore security rules">
+    Implement Firestore security rules to restrict data access:
+
+    ```javascript
+    rules_version = '2';
+    service cloud.firestore {
+      match /databases/{database}/documents {
+        match /users/{userId} {
+          allow read, write: if request.auth != null && request.auth.uid == userId;
+        }
+      }
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Password requirements">
+    Firebase enforces minimum password requirements:
+    - Minimum 6 characters
+    - Consider implementing additional client-side validation for stronger passwords
+  </Accordion>
+</AccordionGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Firebase initialization errors">
+    **Error**: "Firebase: No Firebase App '[DEFAULT]' has been created"
+
+    **Solution**: Ensure Firebase is initialized before importing `auth`, `db`, or `storage`:
+
+    ```typescript
+    // Always import from @/lib/firebase, never initialize directly
+    import { auth, db } from "@/lib/firebase";
+    ```
+  </Accordion>
+
+  <Accordion title="NextAuth session issues">
+    **Error**: Session data is undefined or stale
+
+    **Solution**: The session callback fetches fresh data on each request. If issues persist, check:
+    - JWT secret is properly configured
+    - Token expiration settings
+    - Firestore read permissions
+  </Accordion>
+
+  <Accordion title="Google OAuth not working">
+    **Error**: "Error 400: redirect_uri_mismatch"
+
+    **Solution**: Add your redirect URI to Google Cloud Console:
+    1. Go to Google Cloud Console → APIs & Services → Credentials
+    2. Edit your OAuth 2.0 Client ID
+    3. Add `http://localhost:3000/api/auth/callback/google` to Authorized redirect URIs
+  </Accordion>
+
+  <Accordion title="CORS errors">
+    **Error**: CORS policy blocks Firebase requests
+
+    **Solution**: Ensure Firebase Auth domain is correctly configured:
+    ```bash
+    NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Quickstart guide" icon="rocket" href="/quickstart">
+    Complete the onboarding flow after authentication
+  </Card>
+  <Card title="API reference" icon="code" href="/api/auth/overview">
+    Learn how to make authenticated API requests
+  </Card>
+  <Card title="User management" icon="users" href="/api/user/profile">
+    Manage user profiles and data
+  </Card>
+  <Card title="Dashboard" icon="chart-line" href="/features/dashboard">
+    Track your progress and performance
+  </Card>
+</CardGroup>

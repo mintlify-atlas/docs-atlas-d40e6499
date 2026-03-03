@@ -1,0 +1,171 @@
+---
+title: 'Essay Analysis'
+api: 'POST /api/essay'
+description: 'Analyze bar exam essays using GPT-4 and receive detailed feedback on structure, legal analysis, and writing quality'
+---
+
+## Overview
+
+This endpoint analyzes bar exam essays using OpenAI's GPT-4 model. It provides comprehensive feedback across multiple dimensions including structure, legal analysis, and writing quality, along with actionable suggestions for improvement.
+
+## Request
+
+<ParamField body="content" type="string" required>
+  The essay content to be analyzed
+</ParamField>
+
+## Response
+
+<ResponseField name="structure" type="number">
+  Score between 0 and 1 indicating essay organization and structure quality
+</ResponseField>
+
+<ResponseField name="structureFeedback" type="string">
+  Detailed feedback on the essay's structure and organization
+</ResponseField>
+
+<ResponseField name="legalAnalysis" type="number">
+  Score between 0 and 1 indicating quality of legal reasoning and analysis
+</ResponseField>
+
+<ResponseField name="legalAnalysisFeedback" type="string">
+  Detailed feedback on legal analysis, reasoning, and application of law
+</ResponseField>
+
+<ResponseField name="writingQuality" type="number">
+  Score between 0 and 1 indicating overall writing quality and clarity
+</ResponseField>
+
+<ResponseField name="writingQualityFeedback" type="string">
+  Detailed feedback on writing style, clarity, and grammar
+</ResponseField>
+
+<ResponseField name="suggestions" type="array">
+  Array of actionable suggestions for improving the essay
+</ResponseField>
+
+## OpenAI Integration
+
+The endpoint uses OpenAI's Chat Completions API with the following configuration:
+
+- **Model**: `gpt-4` (or `gpt-4-turbo` if available)
+- **System Role**: Legal writing expert focused on bar exam essays
+- **Max Tokens**: 1000
+- **Temperature**: 0.7 (balanced creativity and consistency)
+- **Response Format**: Strictly formatted JSON
+- **Validation**: Ensures all required fields are present in the response
+
+Source: `/workspace/source/src/app/api/essay/route.ts:41-52`
+
+## Sample Essay Prompt
+
+The AI analyzes essays against this sample prompt:
+
+"Analyze the constitutional implications of a law requiring social media age verification."
+
+Source: `/workspace/source/src/app/api/essay/route.ts:37`
+
+## Example Request
+
+```bash
+curl -X POST 'https://api.lsattraining.com/api/essay' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "content": "The law requiring social media age verification raises significant First Amendment concerns. Under strict scrutiny, content-based restrictions on speech must serve a compelling government interest and be narrowly tailored. While protecting minors online is compelling, mandatory age verification may chill protected speech and impose undue burdens on adult users. Less restrictive alternatives, such as parental control tools, should be considered. The law also implicates privacy rights under the Fourth Amendment..."
+  }'
+```
+
+## Example Response
+
+```json
+{
+  "structure": 0.85,
+  "structureFeedback": "Your essay follows a clear IRAC structure and effectively organizes constitutional arguments. Consider adding a more explicit conclusion paragraph to strengthen the overall structure.",
+  "legalAnalysis": 0.88,
+  "legalAnalysisFeedback": "Excellent identification of First Amendment issues and proper application of strict scrutiny. Your analysis of less restrictive alternatives demonstrates strong legal reasoning. Consider citing relevant precedents like Reno v. ACLU to strengthen your argument.",
+  "writingQuality": 0.82,
+  "writingQualityFeedback": "Clear and professional writing style. Some sentences could be more concise. Watch for passive voice in a few areas.",
+  "suggestions": [
+    "Add specific case citations to support constitutional arguments",
+    "Develop the Fourth Amendment privacy analysis further",
+    "Include discussion of intermediate scrutiny as an alternative framework",
+    "Strengthen the conclusion with a clear ruling and rationale"
+  ]
+}
+```
+
+## Evaluation Criteria
+
+### Structure (0-1 scale)
+- Organization and flow
+- IRAC methodology application
+- Logical progression of arguments
+- Introduction and conclusion quality
+
+### Legal Analysis (0-1 scale)
+- Issue identification
+- Rule statement accuracy
+- Application of law to facts
+- Legal reasoning quality
+- Use of precedents
+
+### Writing Quality (0-1 scale)
+- Clarity and conciseness
+- Grammar and punctuation
+- Professional tone
+- Sentence structure
+- Word choice
+
+## Error Handling
+
+The endpoint includes robust error handling:
+
+- **JSON Parsing**: Automatically cleans markdown code blocks from GPT-4 responses
+- **Validation**: Verifies all required fields are present in the AI response
+- **Field Validation**: Ensures scores are numeric and feedback fields contain text
+
+Source: `/workspace/source/src/app/api/essay/route.ts:57-89`
+
+## Error Responses
+
+<ResponseField name="error" type="string">
+  Error message describing what went wrong
+</ResponseField>
+
+### 400 Bad Request
+
+```json
+{
+  "error": "Essay content is required"
+}
+```
+
+### 500 Internal Server Error
+
+```json
+{
+  "error": "Failed to process feedback. Please try again."
+}
+```
+
+```json
+{
+  "error": "Invalid feedback format received from AI"
+}
+```
+
+```json
+{
+  "error": "Internal server error. Please try again later."
+}
+```
+
+## Best Practices
+
+- Provide essays with at least 200-300 words for comprehensive analysis
+- Include proper legal analysis elements (IRAC format)
+- Submit well-formatted text for accurate evaluation
+- Review all three feedback categories to identify improvement areas
+- Use suggestions to guide revision and practice
+
+Source: `/workspace/source/src/app/api/essay/route.ts`

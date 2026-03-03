@@ -1,0 +1,259 @@
+---
+title: 'Dashboard'
+description: 'Your command center for Bar Exam preparation with real-time progress tracking, study streaks, and personalized daily plans'
+icon: 'chart-line'
+---
+
+The Dashboard is your central hub for tracking progress, managing study plans, and monitoring your journey toward Bar Exam success.
+
+## Overview
+
+The dashboard provides a comprehensive view of your exam preparation with real-time metrics, performance analytics, and personalized recommendations to keep you on track.
+
+<CardGroup cols={2}>
+  <Card title="Real-Time Progress" icon="chart-bar">
+    Track practice questions completed, current score, target score, and study streak in one glance
+  </Card>
+  <Card title="Daily Study Plans" icon="calendar-check">
+    Get personalized daily tasks based on your exam date and performance level
+  </Card>
+  <Card title="Performance Insights" icon="chart-line">
+    View exam performance breakdown by subject with visual progress indicators
+  </Card>
+  <Card title="Exam Countdown" icon="clock">
+    Live countdown timer showing days, hours, minutes, and seconds until your Bar Exam
+  </Card>
+</CardGroup>
+
+## Key Features
+
+### Exam Countdown Timer
+
+Stay motivated with a real-time countdown to your Bar Exam date:
+
+- Displays in days, hours, minutes, and seconds
+- Updates every second for accurate tracking
+- Shows formatted exam date (e.g., "February 25, 2026")
+- Post-exam result tracking when countdown completes
+
+<Info>
+  When your exam date passes, the system prompts you to update your exam result, new exam date, and scores.
+</Info>
+
+### Progress Metrics
+
+Track four key metrics at the top of your dashboard:
+
+<Steps>
+  <Step title="Practice Questions">
+    Total number of questions you've completed across all subjects
+  </Step>
+  <Step title="Current Score">
+    Your current Bar Exam score (260-400 scale)
+  </Step>
+  <Step title="Target Score">
+    Your goal score with points remaining to achieve it
+  </Step>
+  <Step title="Study Streak">
+    Consecutive days of active study to maintain momentum
+  </Step>
+</Steps>
+
+### Today's Study Plan
+
+Your personalized daily study plan includes:
+
+- 5-7 targeted tasks based on your performance level
+- Interactive checkboxes to mark tasks complete
+- Visual feedback with strikethrough for completed items
+- Quick link to view your full weekly/monthly study plan
+
+**Study Plan Levels:**
+- **Terrible (260-279):** Basic review and foundational concepts
+- **Bad (280-299):** Intermediate concepts and more practice
+- **Decent (300-319):** Moderate practice with case analysis
+- **Good (320-349):** Challenging questions and advanced doctrines
+- **Amazing (350-400):** Expert-level practice and full simulations
+
+<Tabs>
+  <Tab title="Example Tasks">
+    ```
+    ✓ Review Constitutional Law precedents
+    ✓ Practice 15 moderate Contract Law questions  
+    ✓ Break down a Criminal Law case ruling
+    ✓ Study class actions in Civil Procedure
+    ✓ Analyze hearsay exceptions in depth
+    ```
+  </Tab>
+  <Tab title="Completion Flow">
+    1. View your daily tasks on dashboard load
+    2. Click checkbox to mark task complete
+    3. Task displays strikethrough and faded styling
+    4. Click again to unmark if needed
+    5. Access full study plan for weekly/monthly view
+  </Tab>
+</Tabs>
+
+### Performance Insights
+
+Analyze your exam performance with detailed metrics:
+
+- **Subject-wise breakdown** showing correct answers vs. total questions
+- **Percentage scores** calculated automatically
+- **Visual progress bars** for each exam attempt
+- **Exam ID labels** with formatted names
+- Sortable by timestamp to see recent attempts first
+
+### Practice History
+
+View your recent practice sessions:
+
+- **Session timestamp** formatted as "Month Day" (e.g., "Dec 15")
+- **Subject/section name** for each practice set
+- **Score tracking** showing correct answers out of total
+- Limited to most recent sessions for quick reference
+
+### Suggested Practice Areas
+
+The dashboard recommends three practice areas to strengthen:
+
+<CardGroup cols={3}>
+  <Card title="Constitutional Law" icon="landmark" href="/features/question-bank">
+    Master fundamental rights and judicial review
+    
+    20+ practice sets
+  </Card>
+  <Card title="Contracts" icon="file-contract" href="/features/question-bank">
+    Understand formation, breach, and remedies
+    
+    20+ practice sets
+  </Card>
+  <Card title="Criminal Law" icon="gavel" href="/features/question-bank">
+    Learn elements of crimes and defenses
+    
+    20+ practice sets
+  </Card>
+</CardGroup>
+
+### Continue Your Preparation
+
+Quick access to advanced tools:
+
+- **AI Tutor** - Get personalized feedback on your answers (New)
+- **Question Bank** - 500+ practice questions with explanations (Popular)  
+- **Mock Exams** - Simulate real exam conditions (Pro Feature)
+
+## User Interface Components
+
+### Header Section
+
+```tsx
+Welcome back, [User Name]!
+Track your progress and continue your Bar Exam prep
+
+[Exam Countdown Card]
+Bar Exam: February 25, 2026
+[Days] [Hours] [Minutes] [Seconds]
+```
+
+### Metrics Grid
+
+Four cards displaying key statistics in a responsive grid:
+- Mobile: Single column
+- Tablet: 2 columns
+- Desktop: 4 columns
+
+### Study Plan Card
+
+Interactive task list with:
+- Checkbox for completion tracking
+- Task description
+- Progress persistence (tasks reset on page reload)
+- "View Full Study Plan" button
+
+## Post-Exam Dialog
+
+When your exam date passes, you'll see a dialog to update:
+
+<Steps>
+  <Step title="Exam Result">
+    Select: Passed, Failed, or Prefer not to say
+  </Step>
+  <Step title="New Exam Date">
+    Choose your next exam date if retaking
+  </Step>
+  <Step title="Current Score">
+    Update with your actual exam score (260-400)
+  </Step>
+  <Step title="Target Score">
+    Set a new target score for next attempt
+  </Step>
+</Steps>
+
+<Note>
+  Score validation ensures:
+  - Scores are between 260-400
+  - Target score ≥ current score
+  - All fields are required before submission
+</Note>
+
+## Technical Implementation
+
+### Real-Time Updates
+
+The dashboard uses:
+- **Firebase Authentication** for user identity
+- **API polling** for user data updates
+- **Countdown intervals** updating every second
+- **Client-side state management** for task completion
+
+### Data Sources
+
+```typescript
+interface UserData {
+  practiceHistory: PracticeSession[];
+  performanceInsights: PerformanceInsight[];
+  StudyStreak: number;
+  PracticeQuestions: number;
+  currentScore: string;
+  targetScore: string;
+  barExamTestDate: string;
+  questionDataKey: StudyPlanKey;
+}
+```
+
+### Study Plan Calculation
+
+Study plans are dynamically loaded based on `questionDataKey`:
+
+```typescript
+const studyPlan = studyPlans[userData.questionDataKey];
+const todaysTasks = studyPlan.today; // Array of 5-7 task strings
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Check Daily" icon="calendar-day">
+    Visit your dashboard each day to maintain your study streak and review progress
+  </Card>
+  <Card title="Complete Tasks" icon="check-circle">
+    Mark off daily tasks as you complete them to track daily accomplishments
+  </Card>
+  <Card title="Monitor Performance" icon="chart-line">
+    Review performance insights weekly to identify weak areas
+  </Card>
+  <Card title="Update Scores" icon="arrow-trend-up">
+    Update your current score after practice exams to get better study plan recommendations
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+From your dashboard, you can:
+
+- Click "View Full Study Plan" to see weekly and monthly breakdowns
+- Navigate to suggested practice areas to start studying
+- Access the AI Tutor for personalized coaching
+- Take mock exams to assess your readiness
+- View your question bank progress by subject
