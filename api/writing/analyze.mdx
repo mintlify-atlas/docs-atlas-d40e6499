@@ -1,0 +1,252 @@
+---
+title: Writing Analysis API
+description: Analyze bar exam essays and performance tests with AI-powered feedback
+---
+
+## Overview
+
+The Writing Analysis API evaluates bar exam essay responses and performance test submissions, providing detailed feedback on structure, legal analysis, and writing quality.
+
+**Endpoint**: `POST /api/writing/analyze`
+
+## Authentication
+
+This endpoint requires authentication. Include a valid session token in your request headers.
+
+## Request
+
+<ParamField path="type" type="string" required>
+  Type of writing to analyze
+  
+  **Options:**
+  - `essay` - Bar exam essay response
+  - `performance` - Performance test response
+</ParamField>
+
+<ParamField path="content" type="string" required>
+  The written content to analyze
+  
+  **Requirements:**
+  - Minimum 100 characters
+  - Maximum 10,000 characters recommended
+  - Plain text or formatted text accepted
+</ParamField>
+
+## Response
+
+<ResponseField name="structure" type="number">
+  Score from 0 to 1 for structural organization
+  
+  Evaluates:
+  - IRAC/CRAC methodology
+  - Paragraph organization
+  - Logical flow
+</ResponseField>
+
+<ResponseField name="legalAnalysis" type="number">
+  Score from 0 to 1 for legal analysis quality
+  
+  Evaluates:
+  - Issue identification
+  - Rule application
+  - Case law usage
+  - Reasoning depth
+</ResponseField>
+
+<ResponseField name="writingQuality" type="number">
+  Score from 0 to 1 for writing quality
+  
+  Evaluates:
+  - Clarity and conciseness
+  - Grammar and syntax
+  - Professional tone
+  - Readability
+</ResponseField>
+
+<ResponseField name="structureFeedback" type="string">
+  Detailed feedback on structural elements
+</ResponseField>
+
+<ResponseField name="legalAnalysisFeedback" type="string">
+  Detailed feedback on legal analysis
+</ResponseField>
+
+<ResponseField name="writingQualityFeedback" type="string">
+  Detailed feedback on writing quality
+</ResponseField>
+
+<ResponseField name="suggestions" type="array">
+  Array of specific improvement suggestions
+</ResponseField>
+
+<ResponseField name="aiAnalysis" type="string">
+  Full AI-generated analysis text from GPT-4
+</ResponseField>
+
+## Examples
+
+### Essay Analysis
+
+```bash cURL
+curl -X POST 'https://api.example.com/api/writing/analyze' \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer YOUR_SESSION_TOKEN' \
+  -d '{
+    "type": "essay",
+    "content": "The issue is whether the search violated the Fourth Amendment. The Fourth Amendment protects against unreasonable searches and seizures. Under the exclusionary rule, evidence obtained in violation of the Fourth Amendment must be suppressed. Here, the officer conducted a warrantless search of the vehicle after a traffic stop. While automobile searches have reduced privacy expectations, the officer exceeded the scope by searching the locked glove compartment without probable cause. Therefore, the evidence should be suppressed as fruit of the poisonous tree."
+  }'
+```
+
+```json Response
+{
+  "structure": 0.85,
+  "legalAnalysis": 0.90,
+  "writingQuality": 0.88,
+  "structureFeedback": "Excellent use of IRAC structure. The issue is clearly stated, followed by the rule, application, and conclusion. Consider adding a brief facts section at the beginning.",
+  "legalAnalysisFeedback": "Strong constitutional analysis with good application of Fourth Amendment principles. The reasoning about automobile exception is solid. Consider citing specific cases like Carroll v. United States or Arizona v. Gant to strengthen the analysis.",
+  "writingQualityFeedback": "Clear, concise writing with professional legal tone. Transitions between sections are smooth. Minor improvement: vary sentence structure slightly to enhance readability.",
+  "suggestions": [
+    "Add case citations to support Fourth Amendment analysis (Carroll v. United States, Arizona v. Gant)",
+    "Include a brief facts section before the issue statement",
+    "Expand discussion of probable cause standard for glove compartment search",
+    "Consider discussing good faith exception as counterargument"
+  ],
+  "aiAnalysis": "This essay demonstrates strong command of Fourth Amendment search and seizure doctrine. The IRAC structure is well-executed with clear issue identification and rule application. The analysis correctly identifies the automobile exception while recognizing its limitations regarding locked containers. To elevate this response, incorporate specific case precedent and address potential counterarguments such as the good faith exception. The writing is professional and legally sound, showing excellent understanding of exclusionary rule principles."
+}
+```
+
+### Performance Test Analysis
+
+```bash cURL
+curl -X POST 'https://api.example.com/api/writing/analyze' \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer YOUR_SESSION_TOKEN' \
+  -d '{
+    "type": "performance",
+    "content": "MEMORANDUM\nTO: Senior Partner\nFROM: Associate\nRE: Smith Contract Dispute\nDATE: March 15, 2024\n\nThis memo analyzes whether Smith has valid grounds to terminate the contract with Jones Corp. Based on the materials provided, Smith may terminate under the material breach provision. The contract requires delivery by March 1, but Jones delivered on March 10, nine days late. Under Section 5.2, material breaches allow termination. The delay caused Smith to lose the Johnson contract worth $500,000, constituting substantial harm. Therefore, Smith should proceed with termination and pursue damages."
+  }'
+```
+
+```json Response
+{
+  "structure": 0.78,
+  "legalAnalysis": 0.82,
+  "writingQuality": 0.85,
+  "structureFeedback": "Good memo format with proper heading. The analysis would benefit from clearer section headers (Facts, Analysis, Conclusion) and more detailed treatment of each element.",
+  "legalAnalysisFeedback": "Solid identification of the material breach issue. Good application of contract terms to facts. Consider analyzing the materiality factors more thoroughly and addressing potential counterarguments about substantial performance.",
+  "writingQualityFeedback": "Professional memo format with clear, direct language. The writing is concise but could provide more detailed reasoning in key areas.",
+  "suggestions": [
+    "Add section headers (Facts, Issue, Analysis, Conclusion) for better organization",
+    "Expand analysis of materiality factors from Restatement (Second) of Contracts §241",
+    "Address substantial performance doctrine as potential counterargument",
+    "Include recommendation on damages calculation",
+    "Discuss whether time was of the essence under the contract"
+  ],
+  "aiAnalysis": "This performance test response shows competent analysis of a contract dispute with proper memo formatting. The writer correctly identifies the breach and applies contract provisions to the facts. To improve, add more thorough analysis of materiality using the common law factors, address the substantial performance doctrine, and provide more detailed recommendations. The writing is clear and professional, demonstrating good understanding of contract remedies."
+}
+```
+
+## Scoring Criteria
+
+### Structure (0-1)
+
+- **0.9-1.0**: Perfect IRAC/memo structure, logical flow, clear organization
+- **0.7-0.89**: Good structure with minor organizational issues
+- **0.5-0.69**: Adequate structure but lacking clarity or organization
+- **Below 0.5**: Poor structure, disorganized, hard to follow
+
+### Legal Analysis (0-1)
+
+- **0.9-1.0**: Exceptional analysis with strong case law, thorough reasoning
+- **0.7-0.89**: Good analysis with solid application of legal principles
+- **0.5-0.69**: Adequate analysis but missing depth or case support
+- **Below 0.5**: Weak analysis, incorrect legal principles, or insufficient reasoning
+
+### Writing Quality (0-1)
+
+- **0.9-1.0**: Professional, clear, concise, grammatically perfect
+- **0.7-0.89**: Good writing with minor issues
+- **0.5-0.69**: Adequate but needs improvement in clarity or grammar
+- **Below 0.5**: Poor writing quality affecting comprehension
+
+## AI Model
+
+- **Model**: OpenAI GPT-4
+- **Temperature**: 0.7 (balanced creativity and consistency)
+- **System Prompt**: Expert bar exam writing evaluator
+- **Focus**: Detailed, constructive feedback for improvement
+
+<Note>
+  The AI provides general scores and detailed text analysis. Scores are indicative and should be used as learning tools rather than definitive grades.
+</Note>
+
+## Error Responses
+
+<ResponseField name="error" type="string">
+  Error message describing what went wrong
+</ResponseField>
+
+### Common Errors
+
+| Status Code | Error | Description |
+|------------|-------|-------------|
+| 400 | Missing required fields | `type` or `content` not provided |
+| 401 | Unauthorized | Invalid or missing authentication token |
+| 500 | Error analyzing writing | OpenAI API error or processing failure |
+
+```json 400 Error
+{
+  "error": "Missing required fields"
+}
+```
+
+```json 500 Error
+{
+  "error": "Error analyzing writing"
+}
+```
+
+## Implementation Details
+
+### Request Processing
+
+1. Validates `type` and `content` fields
+2. Generates type-specific analysis prompt
+3. Calls OpenAI GPT-4 with expert system prompt
+4. Parses AI response and structures feedback
+5. Returns scores, detailed feedback, and suggestions
+
+### Prompt Differences
+
+**Essay Prompt**: Focuses on IRAC structure, constitutional/statutory analysis, case law application, and legal reasoning depth.
+
+**Performance Test Prompt**: Emphasizes organization of materials, synthesis of documents, memo/brief formatting, and practical legal writing skills.
+
+<Warning>
+  Content is sent to OpenAI for analysis. Ensure no confidential or sensitive information is included in submissions.
+</Warning>
+
+## Best Practices
+
+1. **Submit Complete Responses**: Include full essays or performance tests for comprehensive feedback
+2. **Use Proper Type**: Specify correct `type` to get appropriate analysis criteria
+3. **Review All Feedback**: Check scores, detailed feedback, and suggestions for improvement
+4. **Iterate**: Submit revised versions to track improvement over time
+5. **Supplement with Case Law**: Add case citations before submission for better legal analysis scores
+
+## Related Endpoints
+
+<CardGroup cols={2}>
+  <Card title="Essay Analysis" icon="pen" href="/api/essay/analyze">
+    Alternative essay analysis endpoint with different scoring
+  </Card>
+  <Card title="Case Briefing" icon="scale" href="/api/case-briefing/overview">
+    Analyze case briefs with IRAC methodology
+  </Card>
+  <Card title="Legal Writing" icon="gavel" href="/api/case-study/analyze">
+    Comprehensive legal document analysis
+  </Card>
+  <Card title="AI Coach" icon="robot" href="/api/plan/ai-coach">
+    Get personalized study coaching
+  </Card>
+</CardGroup>

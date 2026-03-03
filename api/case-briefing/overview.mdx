@@ -1,0 +1,346 @@
+---
+title: Case Briefing API
+description: Analyze case briefs and generate hypothetical scenarios with AI-powered feedback
+---
+
+## Overview
+
+The Case Briefing API provides AI-powered tools for analyzing legal case briefs, generating hypothetical scenarios, and creating study outlines. All endpoints use OpenAI GPT-4o for detailed legal analysis.
+
+## Endpoints
+
+This section covers three case briefing endpoints:
+
+1. **POST /api/case-briefing** - Analyze user-submitted case briefs
+2. **POST /api/case-briefing/hypothetical** - Generate and analyze hypothetical scenarios
+3. **POST /api/case-briefing/outline** - Generate Constitutional Law study outlines
+
+## Case Brief Analysis
+
+**Endpoint**: `POST /api/case-briefing`
+
+Analyze a user-submitted case brief against actual case data using IRAC methodology.
+
+### Request
+
+<ParamField path="caseData" type="object" required>
+  The actual case information to compare against
+  
+  <Expandable title="properties">
+    <ParamField path="title" type="string" required>
+      Case name and citation
+    </ParamField>
+    <ParamField path="facts" type="string" required>
+      Facts of the case
+    </ParamField>
+    <ParamField path="issue" type="string" required>
+      Legal issue presented
+    </ParamField>
+    <ParamField path="holding" type="string" required>
+      Court's holding
+    </ParamField>
+    <ParamField path="reasoning" type="string" required>
+      Court's reasoning
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField path="userBrief" type="object" required>
+  User's submitted brief following IRAC format
+  
+  <Expandable title="properties">
+    <ParamField path="facts" type="string" required>
+      User's summary of facts
+    </ParamField>
+    <ParamField path="issue" type="string" required>
+      User's identification of legal issue
+    </ParamField>
+    <ParamField path="rule" type="string" required>
+      User's statement of legal rule
+    </ParamField>
+    <ParamField path="application" type="string" required>
+      User's application of rule to facts
+    </ParamField>
+    <ParamField path="conclusion" type="string" required>
+      User's conclusion
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+### Response
+
+<ResponseField name="factsScore" type="number">
+  Score from 0 to 1 for facts accuracy
+</ResponseField>
+
+<ResponseField name="factsFeedback" type="string">
+  Detailed feedback on facts section
+</ResponseField>
+
+<ResponseField name="issueScore" type="number">
+  Score from 0 to 1 for issue identification
+</ResponseField>
+
+<ResponseField name="issueFeedback" type="string">
+  Feedback on issue identification
+</ResponseField>
+
+<ResponseField name="ruleScore" type="number">
+  Score from 0 to 1 for rule statement
+</ResponseField>
+
+<ResponseField name="ruleFeedback" type="string">
+  Feedback on legal rule
+</ResponseField>
+
+<ResponseField name="applicationScore" type="number">
+  Score from 0 to 1 for application
+</ResponseField>
+
+<ResponseField name="applicationFeedback" type="string">
+  Feedback on application of rule to facts
+</ResponseField>
+
+<ResponseField name="conclusionScore" type="number">
+  Score from 0 to 1 for conclusion
+</ResponseField>
+
+<ResponseField name="conclusionFeedback" type="string">
+  Feedback on conclusion
+</ResponseField>
+
+<ResponseField name="suggestions" type="array">
+  Array of improvement suggestions
+</ResponseField>
+
+<ResponseField name="modelBrief" type="object">
+  Model answer showing ideal brief structure
+  
+  <Expandable title="properties">
+    <ResponseField name="facts" type="string">
+      Model facts section
+    </ResponseField>
+    <ResponseField name="issue" type="string">
+      Model issue statement
+    </ResponseField>
+    <ResponseField name="rule" type="string">
+      Model rule statement
+    </ResponseField>
+    <ResponseField name="application" type="string">
+      Model application
+    </ResponseField>
+    <ResponseField name="conclusion" type="string">
+      Model conclusion
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Example
+
+```bash cURL
+curl -X POST 'https://api.example.com/api/case-briefing' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "caseData": {
+      "title": "Miranda v. Arizona, 384 U.S. 436 (1966)",
+      "facts": "Ernesto Miranda was arrested and interrogated without being informed of his rights...",
+      "issue": "Whether statements obtained from a defendant during custodial interrogation are admissible if the defendant was not informed of constitutional rights",
+      "holding": "Statements are inadmissible unless defendant was informed of rights and waived them",
+      "reasoning": "Fifth Amendment privilege against self-incrimination requires warnings before custodial interrogation"
+    },
+    "userBrief": {
+      "facts": "Miranda was arrested and questioned without being told his rights",
+      "issue": "Can police use statements from interrogation without warnings?",
+      "rule": "Fifth Amendment protects against self-incrimination",
+      "application": "Miranda was not told he could remain silent or have a lawyer",
+      "conclusion": "Statements should not be allowed in court"
+    }
+  }'
+```
+
+```json Response
+{
+  "factsScore": 0.85,
+  "factsFeedback": "Good summary of key facts. Consider adding more detail about the custodial nature of the interrogation.",
+  "issueScore": 0.90,
+  "issueFeedback": "Issue correctly identified. Could be more precise about custodial interrogation requirements.",
+  "ruleScore": 0.75,
+  "ruleFeedback": "Correct constitutional provision, but should state the specific warnings required.",
+  "applicationScore": 0.80,
+  "applicationFeedback": "Good application. Expand on why the lack of warnings violated his rights.",
+  "conclusionScore": 0.85,
+  "conclusionFeedback": "Correct conclusion. Could reference the exclusionary rule.",
+  "suggestions": [
+    "Include the specific Miranda warnings in the rule section",
+    "Explain the procedural safeguards required during custodial interrogation",
+    "Reference the exclusionary rule in your conclusion"
+  ],
+  "modelBrief": {
+    "facts": "Ernesto Miranda was arrested at his home and taken to a police station where he was questioned for two hours without being advised of his constitutional rights...",
+    "issue": "Whether statements obtained during custodial interrogation are admissible when the suspect was not informed of Fifth and Sixth Amendment rights",
+    "rule": "The Fifth Amendment privilege against self-incrimination requires that suspects in custody be warned of their right to remain silent and right to counsel before interrogation",
+    "application": "Miranda was subjected to custodial interrogation without being informed of these rights, rendering his statements involuntary under the Fifth Amendment",
+    "conclusion": "The statements are inadmissible under the exclusionary rule as they were obtained in violation of Miranda's constitutional rights"
+  }
+}
+```
+
+## Hypothetical Scenarios
+
+**Endpoint**: `POST /api/case-briefing/hypothetical`
+
+Generate legal hypotheticals based on cases or analyze user responses to hypothetical scenarios.
+
+### Generate Hypothetical
+
+<ParamField path="caseId" type="string" required>
+  Case identifier to base hypothetical on
+</ParamField>
+
+### Response
+
+<ResponseField name="hypothetical" type="string">
+  Generated hypothetical scenario
+</ResponseField>
+
+### Analyze Response
+
+<ParamField path="hypothetical" type="string" required>
+  The hypothetical scenario
+</ParamField>
+
+<ParamField path="userResponse" type="string" required>
+  User's legal analysis of the hypothetical
+</ParamField>
+
+### Response
+
+<ResponseField name="issueSpottingScore" type="number">
+  Score from 0 to 1 for identifying legal issues
+</ResponseField>
+
+<ResponseField name="issueSpottingFeedback" type="string">
+  Feedback on issue spotting ability
+</ResponseField>
+
+<ResponseField name="reasoningScore" type="number">
+  Score from 0 to 1 for legal reasoning
+</ResponseField>
+
+<ResponseField name="reasoningFeedback" type="string">
+  Feedback on reasoning quality
+</ResponseField>
+
+<ResponseField name="precedentScore" type="number">
+  Score from 0 to 1 for use of precedent
+</ResponseField>
+
+<ResponseField name="precedentFeedback" type="string">
+  Feedback on precedent citation and application
+</ResponseField>
+
+<ResponseField name="clarityScore" type="number">
+  Score from 0 to 1 for writing clarity
+</ResponseField>
+
+<ResponseField name="clarityFeedback" type="string">
+  Feedback on writing clarity
+</ResponseField>
+
+<ResponseField name="suggestions" type="array">
+  Improvement suggestions
+</ResponseField>
+
+<ResponseField name="modelResponse" type="string">
+  Model legal analysis
+</ResponseField>
+
+## Study Outline Generation
+
+**Endpoint**: `POST /api/case-briefing/outline`
+
+Generate a comprehensive Constitutional Law study outline.
+
+### Request
+
+<ParamField path="userId" type="string">
+  Optional user identifier for tracking
+</ParamField>
+
+### Response
+
+<ResponseField name="success" type="boolean">
+  Whether outline generation succeeded
+</ResponseField>
+
+<ResponseField name="outline" type="string">
+  Plain text outline content with sections:
+  - INTRODUCTION
+  - THE CONSTITUTION
+  - JUDICIAL REVIEW
+  - FEDERALISM
+  - SEPARATION OF POWERS
+  - INDIVIDUAL RIGHTS
+  - LANDMARK CASES
+  - CONCLUSION
+</ResponseField>
+
+<ResponseField name="metadata" type="object">
+  Outline metadata
+  
+  <Expandable title="properties">
+    <ResponseField name="topics" type="array">
+      Main topics covered
+    </ResponseField>
+    <ResponseField name="focusAreas" type="array">
+      Key focus areas
+    </ResponseField>
+    <ResponseField name="generatedAt" type="string">
+      ISO timestamp of generation
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Error Responses
+
+<ResponseField name="error" type="string">
+  Error message
+</ResponseField>
+
+### Common Errors
+
+| Status Code | Error Message | Description |
+|------------|---------------|-------------|
+| 400 | Case data and user brief are required | Missing required fields in brief analysis |
+| 400 | Case ID or hypothetical is required | Missing required fields for hypothetical |
+| 400 | Invalid content type | Request must be application/json |
+| 500 | Failed to process feedback from AI | OpenAI response parsing failed |
+| 500 | Internal server error | Server-side processing error |
+
+## Implementation Notes
+
+- All endpoints use OpenAI GPT-4o model
+- Responses are validated and cleaned to ensure valid JSON
+- Maximum token limits: 1500 for brief analysis, 1000 for hypotheticals, 2500 for outlines
+- Temperature: 0.7 for creative analysis, 0.3 for structured outlines
+
+<Note>
+  The case briefing endpoints require valid OpenAI API credentials configured in environment variables.
+</Note>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Case Study Analysis" icon="scale" href="/api/case-study/analyze">
+    Analyze full legal cases and research
+  </Card>
+  <Card title="Essay Analysis" icon="pen" href="/api/essay/analyze">
+    Get feedback on essay responses
+  </Card>
+  <Card title="Writing Analysis" icon="edit" href="/api/writing/analyze">
+    Analyze bar exam writing samples
+  </Card>
+  <Card title="Authentication" icon="shield" href="/api/auth/overview">
+    Learn about API authentication
+  </Card>
+</CardGroup>

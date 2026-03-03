@@ -78,6 +78,8 @@
               "api/plan/ai-coach",
               "api/essay/analyze",
               "api/case-study/analyze",
+              "api/case-briefing/overview",
+              "api/writing/analyze",
               "api/practice/history",
               "api/practice/exam-results"
             ]
