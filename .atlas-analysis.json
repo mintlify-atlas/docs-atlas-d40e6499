@@ -1,0 +1,115 @@
+{
+  "projectType": "saas",
+  "projectName": "LSAT Training Platform",
+  "projectDescription": "An AI-powered study platform for LSAT and Bar exam preparation with personalized learning paths, practice questions, and case analysis.",
+  "theme": "palm",
+  "primaryColor": "#1f2937",
+  "lightColor": "#f3f4f6",
+  "darkColor": "#111827",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "authentication"
+            ]
+          },
+          {
+            "group": "Core Features",
+            "pages": [
+              "features/dashboard",
+              "features/study-plans",
+              "features/question-bank",
+              "features/case-studies",
+              "features/mock-exams",
+              "features/ai-tutor"
+            ]
+          },
+          {
+            "group": "User Guide",
+            "pages": [
+              "guide/onboarding",
+              "guide/practice-sessions",
+              "guide/tracking-progress",
+              "guide/subscription-plans"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Authentication",
+            "pages": [
+              "api/auth/overview",
+              "api/auth/nextauth"
+            ]
+          },
+          {
+            "group": "User Management",
+            "pages": [
+              "api/user/profile",
+              "api/user/onboarding",
+              "api/user/update"
+            ]
+          },
+          {
+            "group": "Study Features",
+            "pages": [
+              "api/plan/generate",
+              "api/plan/ai-coach",
+              "api/essay/analyze",
+              "api/case-study/analyze",
+              "api/practice/history",
+              "api/practice/exam-results"
+            ]
+          },
+          {
+            "group": "Payment",
+            "pages": [
+              "api/payment/checkout",
+              "api/payment/webhook"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "AI-powered study plan generation",
+    "Personalized question banks with 7 legal subjects",
+    "Interactive case study analysis and briefing",
+    "Mock exams with real-time scoring",
+    "AI tutor for essay feedback",
+    "Progress tracking and performance insights",
+    "Stripe subscription management"
+  ],
+  "publicApiSurface": [
+    "POST /api/auth/[...nextauth] - NextAuth authentication",
+    "GET /api/user - Fetch user profile",
+    "POST /api/onboarding - Complete user onboarding",
+    "PUT /api/updateuserdata - Update user data",
+    "POST /api/plan/generate-plan - Generate personalized study plan",
+    "POST /api/plan/ai-coach - AI coaching chat",
+    "POST /api/essay/route - Essay analysis",
+    "POST /api/case-study/analyze - Case analysis",
+    "POST /api/case-study/analyze-brief - Case brief analysis",
+    "POST /api/case-study/case-research - Legal research",
+    "POST /api/case-study/legal-writing - Legal writing feedback",
+    "POST /api/case-study/moot-court - Moot court practice",
+    "POST /api/case-briefing/route - Case briefing",
+    "POST /api/case-briefing/hypothetical - Hypothetical questions",
+    "POST /api/case-briefing/outline - Case outline generation",
+    "POST /api/writing/analyze - Writing analysis",
+    "GET /api/history - Practice history",
+    "GET /api/exam-results - Exam results",
+    "POST /api/create-checkout-session - Stripe checkout",
+    "POST /api/webhook - Stripe webhook"
+  ]
+}
